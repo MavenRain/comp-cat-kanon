@@ -1,0 +1,76 @@
+def ArrowObject : Type 0 := CommaObj FinSet FinArrow FinSet
+def ArrowMorphism : Type 0 := CommaHom FinSet FinArrow FinArrow FinSet FinArrow
+def arrowObject : FinArrow -> ArrowObject := fun (h : FinArrow) => tuple (h.0, h, h.2)
+def arrowInput : CommaInput FinSet FinArrow FinSet FinArrow FinSet FinArrow :=
+  tuple (finSetGround, finSetGround, finSetCategory, identityFunctor FinSet FinArrow, identityFunctor FinSet FinArrow,
+    setInitial.1,
+    (fun (a : FinSet) (b : FinSet) => resultMap (Coproduct FinSet FinArrow) (prod (One, FinSet -> FinArrow -> FinArrow -> Result FinArrow))
+      (fun (cp : Coproduct FinSet FinArrow) => tuple (one, (fun (target : FinSet) (f : FinArrow) (g : FinArrow) => cp.3 target f g))) (setCoproduct a b)),
+    (fun (f : FinArrow) (g : FinArrow) => resultMap (Coequalizer FinSet FinArrow) (prod (One, FinSet -> FinArrow -> Result FinArrow))
+      (fun (ce : Coequalizer FinSet FinArrow) => tuple (one, (fun (target : FinSet) (h : FinArrow) => ce.2 target h))) (setCoequalizer f g)),
+    setIdentity setEmpty, textArrowCategory)
+def arrowGround : Grounding ArrowObject ArrowMorphism :=
+  commaGround FinSet FinArrow FinSet FinArrow FinSet FinArrow arrowInput
+def arrowCategory : Category ArrowObject ArrowMorphism := arrowGround.0
+def arrowCommutes : ArrowMorphism -> Result Bool :=
+  commaCommutes FinSet FinArrow FinSet FinArrow FinSet FinArrow arrowInput
+def arrowMorphism : ArrowObject -> FinArrow -> FinArrow -> ArrowObject -> Result ArrowMorphism :=
+  fun (source : ArrowObject) (dom : FinArrow) (cod : FinArrow) (target : ArrowObject) =>
+  let h : ArrowMorphism := tuple (source, dom, cod, target) in
+  bind One ArrowMorphism (require (boolAnd (boolAnd (setEqual dom.0 source.0) (setEqual dom.2 target.0))
+    (boolAnd (setEqual cod.0 source.2) (setEqual cod.2 target.2))) (illFormed textArrowCategory textNotParallel)) (fun (u : One) =>
+  bind Bool ArrowMorphism (arrowCommutes h) (fun (commutes : Bool) =>
+  bind One ArrowMorphism (require commutes (notUniversal textArrowCategory)) (fun (u : One) => ok ArrowMorphism h)))
+def arrowTerminal : Initial ArrowObject ArrowMorphism :=
+  let singleton : FinSet := setTerminal.0 in
+  let terminal : ArrowObject := arrowObject (setIdentity singleton) in
+  tuple (terminal, (fun (a : ArrowObject) => bind FinArrow ArrowMorphism (setTerminal.1 a.0) (fun (dom : FinArrow) =>
+    resultMap FinArrow ArrowMorphism (fun (cod : FinArrow) => tuple (a, dom, cod, terminal)) (setTerminal.1 a.2))))
+def arrowProduct : ArrowObject -> ArrowObject -> Result (Coproduct ArrowObject ArrowMorphism) :=
+  fun (a : ArrowObject) (b : ArrowObject) =>
+  bind (Coproduct FinSet FinArrow) (Coproduct ArrowObject ArrowMorphism) (setProduct a.0 b.0) (fun (pd : Coproduct FinSet FinArrow) =>
+  bind (Coproduct FinSet FinArrow) (Coproduct ArrowObject ArrowMorphism) (setProduct a.2 b.2) (fun (pc : Coproduct FinSet FinArrow) =>
+  bind FinArrow (Coproduct ArrowObject ArrowMorphism) (setCompose a.1 pd.1) (fun (left : FinArrow) =>
+  bind FinArrow (Coproduct ArrowObject ArrowMorphism) (setCompose b.1 pd.2) (fun (right : FinArrow) =>
+  resultMap FinArrow (Coproduct ArrowObject ArrowMorphism) (fun (middle : FinArrow) =>
+    let product : ArrowObject := tuple (pd.0, middle, pc.0) in
+    tuple (product, tuple (product, pd.1, pc.1, a), tuple (product, pd.2, pc.2, b),
+      (fun (target : ArrowObject) (f : ArrowMorphism) (g : ArrowMorphism) =>
+        bind FinArrow ArrowMorphism (pd.3 target.0 f.1 g.1) (fun (dom : FinArrow) =>
+          resultMap FinArrow ArrowMorphism (fun (cod : FinArrow) => tuple (target, dom, cod, product)) (pc.3 target.2 f.2 g.2)))))
+    (pc.3 pd.0 left right)))))
+def arrowEqualizer : ArrowMorphism -> ArrowMorphism -> Result (Coequalizer ArrowObject ArrowMorphism) :=
+  fun (f : ArrowMorphism) (g : ArrowMorphism) =>
+  bind (Coequalizer FinSet FinArrow) (Coequalizer ArrowObject ArrowMorphism) (setEqualizer f.1 g.1) (fun (ed : Coequalizer FinSet FinArrow) =>
+  bind (Coequalizer FinSet FinArrow) (Coequalizer ArrowObject ArrowMorphism) (setEqualizer f.2 g.2) (fun (ec : Coequalizer FinSet FinArrow) =>
+  bind FinArrow (Coequalizer ArrowObject ArrowMorphism) (setCompose f.0.1 ed.1) (fun (map : FinArrow) =>
+  resultMap FinArrow (Coequalizer ArrowObject ArrowMorphism) (fun (middle : FinArrow) =>
+    let equalizer : ArrowObject := tuple (ed.0, middle, ec.0) in
+    tuple (equalizer, tuple (equalizer, ed.1, ec.1, f.0),
+      (fun (target : ArrowObject) (h : ArrowMorphism) =>
+        bind FinArrow ArrowMorphism (ed.2 target.0 h.1) (fun (dom : FinArrow) =>
+          resultMap FinArrow ArrowMorphism (fun (cod : FinArrow) => tuple (target, dom, cod, equalizer)) (ec.2 target.2 h.2)))))
+    (ec.2 ed.0 map))))
+def arrowDualGround : Grounding ArrowObject ArrowMorphism :=
+  tuple (opposite ArrowObject ArrowMorphism arrowCategory, arrowTerminal, arrowProduct, arrowEqualizer)
+
+def setCartesian : FinSet -> FinSet -> FinSet := fun (a : FinSet) (b : FinSet) =>
+  setNormal (listConcat Tag (listMap Tag (List Tag) (fun (x : Tag) => listMap Tag Tag (fun (y : Tag) => tagPair x y) b) a))
+def setProductArrow : FinArrow -> FinArrow -> Result FinArrow := fun (f : FinArrow) (g : FinArrow) =>
+  setMakeM (setCartesian f.0 g.0) (setCartesian f.2 g.2) (fun (x : Tag) =>
+    bind (prod (Tag, Tag)) Tag (tagUnpair x) (fun (p : prod (Tag, Tag)) =>
+    bind Tag Tag (setApply f p.0) (fun (left : Tag) => resultMap Tag Tag (fun (right : Tag) => tagPair left right) (setApply g p.1))))
+def squareFunctor : Functor FinSet FinArrow FinSet FinArrow := tuple (textFinGraph,
+  (fun (s : FinSet) => ok FinSet (setCartesian s s)), (fun (h : FinArrow) => setProductArrow h h))
+def graphInput : CommaInput FinSet FinArrow FinSet FinArrow FinSet FinArrow :=
+  tuple (finSetGround, finSetGround, finSetCategory, identityFunctor FinSet FinArrow, squareFunctor,
+    arrowInput.5, arrowInput.6, arrowInput.7, setIdentity setEmpty, textFinGraph)
+def graphGround : Grounding ArrowObject ArrowMorphism :=
+  commaGround FinSet FinArrow FinSet FinArrow FinSet FinArrow graphInput
+def graphCommutes : ArrowMorphism -> Result Bool :=
+  commaCommutes FinSet FinArrow FinSet FinArrow FinSet FinArrow graphInput
+def graphObject : FinSet -> FinSet -> (Tag -> Tag) -> (Tag -> Tag) -> Result ArrowObject :=
+  fun (nodes : FinSet) (edges : FinSet) (source : Tag -> Tag) (target : Tag -> Tag) =>
+  bind One ArrowObject (require (listAll Tag (fun (e : Tag) => boolAnd (setMember (source e) nodes) (setMember (target e) nodes)) edges)
+    (illFormed textFinGraph textUnifyDomain)) (fun (u : One) =>
+    ok ArrowObject (tuple (edges, setMake edges (setCartesian nodes nodes) (fun (e : Tag) => tagPair (source e) (target e)), nodes)))

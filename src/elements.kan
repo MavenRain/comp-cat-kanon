@@ -1,0 +1,55 @@
+def Presheaf : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) =>
+  prod (Text, O -> Result (List E), H -> E -> Result E, E -> E -> Bool, E -> Text)
+def ElementHom : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) => prod (prod (O, E), H, prod (O, E))
+def elementObjectEqual : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  Category O H -> Presheaf O H E -> prod (O, E) -> prod (O, E) -> Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) (c : Category O H) (p : Presheaf O H E)
+    (a : prod (O, E)) (b : prod (O, E)) => boolAnd (c.5 a.0 b.0) (p.3 a.1 b.1)
+def elementObject : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  Presheaf O H E -> O -> E -> Result (prod (O, E)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) (p : Presheaf O H E) (o : O) (e : E) =>
+  bind (List E) (prod (O, E)) (p.1 o) (fun (xs : List E) =>
+    bind One (prod (O, E)) (require (listMember E p.3 e xs) (illFormed p.0 textOutside))
+      (fun (u : One) => ok (prod (O, E)) (tuple (o, e))))
+def elementMorphism : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  Category O H -> Presheaf O H E -> prod (O, E) -> H -> prod (O, E) -> Result (ElementHom O H E) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) (c : Category O H) (p : Presheaf O H E)
+    (a : prod (O, E)) (h : H) (b : prod (O, E)) =>
+  bind One (ElementHom O H E) (require (boolAnd (c.5 (c.1 h) a.0) (c.5 (c.2 h) b.0))
+    (illFormed p.0 textNotParallel)) (fun (u : One) =>
+  bind E (ElementHom O H E) (p.2 h b.1) (fun (moved : E) =>
+  bind One (ElementHom O H E) (require (p.3 moved a.1) (illFormed p.0 textRuleObligation))
+    (fun (u : One) => ok (ElementHom O H E) (tuple (a, h, b)))))
+def elementCategory : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  Category O H -> Presheaf O H E -> Category (prod (O, E)) (ElementHom O H E) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) (c : Category O H) (p : Presheaf O H E) =>
+  let eq : prod (O, E) -> prod (O, E) -> Bool := elementObjectEqual O H E c p in
+  let show : prod (O, E) -> Text := fun (a : prod (O, E)) => textAppend (c.7 a.0) (p.4 a.1) in
+  tuple (p.0, (fun (h : ElementHom O H E) => h.0), (fun (h : ElementHom O H E) => h.2),
+    (fun (a : prod (O, E)) => tuple (a, c.3 a.0, a)),
+    (fun (g : ElementHom O H E) (f : ElementHom O H E) => case (eq f.2 g.0) with
+      | 0 (u : Unit) => err (ElementHom O H E) (notComposable p.0 (show g.0) (show f.2))
+      | 1 (u : Unit) => resultMap H (ElementHom O H E) (fun (h : H) => tuple (f.0, h, g.2)) (c.4 g.1 f.1)), eq,
+    (fun (g : ElementHom O H E) (f : ElementHom O H E) => boolAnd (eq g.0 f.0) (boolAnd (c.6 g.1 f.1) (eq g.2 f.2))),
+    show, (fun (h : ElementHom O H E) => c.8 h.1))
+def elementFinite : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  FiniteCategory O H -> Presheaf O H E -> Result (FiniteCategory (prod (O, E)) (ElementHom O H E)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) (c : FiniteCategory O H) (p : Presheaf O H E) =>
+  bind (List (List (prod (O, E)))) (FiniteCategory (prod (O, E)) (ElementHom O H E))
+    (listMapM O (List (prod (O, E))) (fun (o : O) => resultMap (List E) (List (prod (O, E)))
+      (listMap E (prod (O, E)) (fun (e : E) => tuple (o, e))) (p.1 o)) c.1)
+    (fun (objects : List (List (prod (O, E)))) =>
+  resultMap (List (List (ElementHom O H E))) (FiniteCategory (prod (O, E)) (ElementHom O H E))
+    (fun (arrows : List (List (ElementHom O H E))) =>
+      finiteFromData (prod (O, E)) (ElementHom O H E) (elementCategory O H E c.0.0 p)
+        (listConcat (prod (O, E)) objects) (listConcat (ElementHom O H E) arrows))
+    (listMapM H (List (ElementHom O H E)) (fun (h : H) =>
+      bind (List E) (List (ElementHom O H E)) (p.1 (c.0.0.2 h)) (fun (xs : List E) =>
+        listMapM E (ElementHom O H E) (fun (y : E) => resultMap E (ElementHom O H E)
+          (fun (x : E) => tuple (tuple (c.0.0.1 h, x), h, tuple (c.0.0.2 h, y))) (p.2 h y)) xs)) c.2))
+def elementProjection : (0 O : Type 0) -> (0 H : Type 0) -> (0 E : Type 0) ->
+  Functor (prod (O, E)) (ElementHom O H E) O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 E : Type 0) =>
+  tuple (textArrow, (fun (a : prod (O, E)) => ok O a.0), (fun (h : ElementHom O H E) => ok H h.1))

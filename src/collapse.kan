@@ -1,0 +1,82 @@
+-- All finite collapses run through Lan or Ran along the terminal functor.
+def colimit : (0 J : Type 0) -> (0 K : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  FiniteCategory J K -> Grounding O H -> Functor J K O H -> Result (Colimiting O H) :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (g : Grounding O H) (f : Functor J K O H) =>
+  (lan J K One One O H jcat terminalCategory.0 g (terminalFunctor J K) f).0 one
+def limit : (0 J : Type 0) -> (0 K : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  FiniteCategory J K -> Grounding O H -> Functor J K O H -> Result (Colimiting O H) :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (g : Grounding O H) (f : Functor J K O H) =>
+  (ran J K One One O H jcat terminalCategory.0 g (terminalFunctor J K) f).0 one
+def derivedInitial : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) =>
+  colimit Nat FinHom O H zeroCategory g (shapeTabulate O H g.0.3 (listNil (prod (Nat, O))) (listNil (prod (Nat, H))))
+def derivedCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (a : O) (b : O) =>
+  colimit Nat FinHom O H twoCategory g (shapeTabulate O H g.0.3
+    (listCons (prod (Nat, O)) (tuple (0, a)) (listCons (prod (Nat, O)) (tuple (1, b)) (listNil (prod (Nat, O)))))
+    (listNil (prod (Nat, H))))
+def derivedProduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (dual : Grounding O H) (a : O) (b : O) =>
+  limit Nat FinHom O H twoCategory dual (shapeTabulate O H dual.0.3
+    (listCons (prod (Nat, O)) (tuple (0, a)) (listCons (prod (Nat, O)) (tuple (1, b)) (listNil (prod (Nat, O)))))
+    (listNil (prod (Nat, H))))
+def pairDiagram : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> H -> H -> Functor Nat FinHom O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (f : H) (g : H) =>
+  shapeTabulate O H c.3
+    (listCons (prod (Nat, O)) (tuple (0, c.1 f)) (listCons (prod (Nat, O)) (tuple (1, c.2 f)) (listNil (prod (Nat, O)))))
+    (listCons (prod (Nat, H)) (tuple (0, f)) (listCons (prod (Nat, H)) (tuple (1, g)) (listNil (prod (Nat, H)))))
+def derivedCoequalizer : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : H) (h : H) =>
+  colimit Nat FinHom O H parallelCategory g (pairDiagram O H g.0 f h)
+def derivedEqualizer : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : H) (h : H) =>
+  limit Nat FinHom O H parallelCategory g (pairDiagram O H (opposite O H g.0) f h)
+
+def spanDiagram : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> H -> H -> Functor Nat FinHom O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (f : H) (g : H) =>
+  shapeTabulate O H c.3
+    (listCons (prod (Nat, O)) (tuple (0, c.1 f))
+      (listCons (prod (Nat, O)) (tuple (1, c.2 f)) (listCons (prod (Nat, O)) (tuple (2, c.2 g)) (listNil (prod (Nat, O))))))
+    (listCons (prod (Nat, H)) (tuple (0, f)) (listCons (prod (Nat, H)) (tuple (1, g)) (listNil (prod (Nat, H)))))
+def derivedPushout : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : H) (h : H) =>
+  colimit Nat FinHom O H spanCategory g (spanDiagram O H g.0 f h)
+def derivedPullback : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : H) (h : H) =>
+  limit Nat FinHom O H cospanCategory g (spanDiagram O H g.0 f h)
+def derivedTerminal : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) =>
+  limit Nat FinHom O H zeroCategory g (shapeTabulate O H g.0.3 (listNil (prod (Nat, O))) (listNil (prod (Nat, H))))
+
+-- The canonical comparison runs in both directions and checks both inverses.
+def isoCheck : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> H -> H -> Result Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (f : H) (g : H) =>
+  bind H Bool (c.4 g f) (fun (gf : H) =>
+    resultMap H Bool (fun (fg : H) => boolAnd (c.6 gf (c.3 (c.1 f))) (c.6 fg (c.3 (c.2 f)))) (c.4 f g))
+def canonicalIso : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Colimiting O H -> Colimiting O H -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (a : Colimiting O H) (b : Colimiting O H) =>
+  bind H (prod (H, H)) (a.2 b.0 b.1) (fun (f : H) =>
+  bind H (prod (H, H)) (b.2 a.0 a.1) (fun (g : H) =>
+  bind Bool (prod (H, H)) (isoCheck O H c f g) (fun (valid : Bool) =>
+  bind One (prod (H, H)) (require valid (notUniversal textUniversal)) (fun (u : One) => ok (prod (H, H)) (tuple (f, g))))))
+def reconcileCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (a : O) (b : O) =>
+  bind (Colimiting O H) (prod (H, H)) (derivedCoproduct O H g a b) (fun (d : Colimiting O H) =>
+  bind (Coproduct O H) (prod (H, H)) (g.2 a b) (fun (p : Coproduct O H) =>
+    canonicalIso O H g.0 d (tuple (p.0,
+      (fun (n : Nat) => case (natEq n 0) with | 0 (u : Unit) => ok H p.2 | 1 (u : Unit) => ok H p.1),
+      (fun (target : O) (fam : Nat -> Result H) => bind H H (fam 0) (fun (f : H) => bind H H (fam 1) (fun (h : H) => p.3 target f h)))))))
+
+-- Book proposition 11: push out (f,f), then equalize its two legs.
+def factorize : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Grounding O H -> H -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (dual : Grounding O H) (f : H) =>
+  bind (Colimiting O H) (prod (H, H)) (derivedPushout O H g f f) (fun (po : Colimiting O H) =>
+  bind H (prod (H, H)) (po.1 1) (fun (p : H) =>
+  bind H (prod (H, H)) (po.1 2) (fun (q : H) =>
+  bind (Colimiting O H) (prod (H, H)) (derivedEqualizer O H dual p q) (fun (eq : Colimiting O H) =>
+  bind H (prod (H, H)) (eq.1 0) (fun (mono : H) =>
+  resultMap H (prod (H, H)) (fun (epi : H) => tuple (epi, mono))
+    (eq.2 (g.0.1 f) (fun (n : Nat) =>
+      case (natEq n 0) with | 0 (u : Unit) => g.0.4 p f | 1 (u : Unit) => ok H f)))))))

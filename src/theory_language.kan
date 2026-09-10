@@ -1,0 +1,48 @@
+def SetTheory : Type 0 := Theory FinSet FinArrow Tag
+def SetTheoryArrow : Type 0 := TheoryArrow FinSet FinArrow Tag
+def SetBased : Type 0 := Based FinSet FinArrow Tag
+def TheoryEnv : Type 0 := List (prod (Text, SetBased))
+def ProcedureEnv : Type 0 := List (prod (Text, prod (SetTheoryArrow, List SetBased)))
+def theoryCombine : SetBased -> SetBased -> Result SetBased := fun (a : SetBased) (b : SetBased) =>
+  resultMap (prod (SetBased, Colimiting SetTheory SetTheoryArrow)) SetBased
+    (fun (p : prod (SetBased, Colimiting SetTheory SetTheoryArrow)) => p.0)
+    (basedColimit FinSet FinArrow Tag fsInstitution finSetGround (listCons SetBased a (listCons SetBased b (listNil SetBased))))
+def theoryApply : SetBased -> List SetBased -> Result SetBased := fun (procedure : SetBased) (fittings : List SetBased) =>
+  err SetBased (unsupported textUniversal textRuleObligation)
+mutual
+mu TheoryExpr : Type 0 :=
+| theoryName (name : Text) : TheoryExpr
+| theoryLiteral (value : SetBased) : TheoryExpr
+| theoryPlus (left : TheoryExpr) (right : TheoryExpr) : TheoryExpr
+| theoryEnrich (body : TheoryExpr) (enrichment : SetTheoryArrow) : TheoryExpr
+| theoryDerivation (map : SetTheoryArrow) : TheoryExpr
+| theoryApplication (name : Text) (arguments : TheoryArgs) : TheoryExpr
+| theoryLet (name : Text) (value : TheoryExpr) (body : TheoryExpr) : TheoryExpr
+mu TheoryArgs : Type 0 :=
+| theoryArgsNil : TheoryArgs
+| theoryArgsCons (head : TheoryExpr) (tail : TheoryArgs) : TheoryArgs
+end
+def rec theorySemantics : TheoryExpr -> TheoryEnv -> ProcedureEnv -> Result SetBased :=
+  fun (e : TheoryExpr) (env : TheoryEnv) (procedures : ProcedureEnv) =>
+  match e as self in TheoryExpr return Result SetBased with
+  | theoryName name => resultMap (prod (Text, SetBased)) SetBased (fun (p : prod (Text, SetBased)) => p.1)
+      (listFind (prod (Text, SetBased)) (fun (p : prod (Text, SetBased)) => listEqual Nat natEq name p.0) (unbound textUniversal name) env)
+  | theoryLiteral value => ok SetBased value
+  | theoryPlus left right => bind SetBased SetBased (theorySemantics left env procedures)
+      (fun (a : SetBased) => bind SetBased SetBased (theorySemantics right env procedures) (theoryCombine a))
+  | theoryEnrich body enrichment => bind SetBased SetBased (theorySemantics body env procedures)
+      (fun (b : SetBased) => basedEnrich FinSet FinArrow Tag fsInstitution b enrichment)
+  | theoryDerivation map => resultMap (prod (SetTheoryArrow, SetTheoryArrow)) SetBased
+      (fun (p : prod (SetTheoryArrow, SetTheoryArrow)) => basedOfTheory FinSet FinArrow Tag p.1.0) (theoryDerive map)
+  | theoryApplication name arguments => bind (List SetBased) SetBased (theoryArgsSemantics arguments env procedures)
+      (fun (fittings : List SetBased) => err SetBased (unsupported textUniversal textRuleObligation))
+  | theoryLet name value body => bind SetBased SetBased (theorySemantics value env procedures)
+      (fun (b : SetBased) => theorySemantics body (listCons (prod (Text, SetBased)) (tuple (name, b)) env) procedures)
+and theoryArgsSemantics : TheoryArgs -> TheoryEnv -> ProcedureEnv -> Result (List SetBased) :=
+  fun (args : TheoryArgs) (env : TheoryEnv) (procedures : ProcedureEnv) =>
+  match args as self in TheoryArgs return Result (List SetBased) with
+  | theoryArgsNil => ok (List SetBased) (listNil SetBased)
+  | theoryArgsCons head tail => bind SetBased (List SetBased) (theorySemantics head env procedures)
+      (fun (b : SetBased) => resultMap (List SetBased) (List SetBased) (listCons SetBased b) (theoryArgsSemantics tail env procedures))
+def theorySignature : List Text -> FinSet := fun (names : List Text) =>
+  setNormal (listMap Text Tag (fun (name : Text) => tagWord name) names)

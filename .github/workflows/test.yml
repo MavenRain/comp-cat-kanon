@@ -1,0 +1,18 @@
+name: test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: '5.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: opam install dune zarith.1.14
+      - run: opam exec -- python3 scripts/bootstrap.py
+      - run: npm test

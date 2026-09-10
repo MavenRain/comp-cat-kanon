@@ -1,0 +1,44 @@
+def arrowTrueValue : Tag := tagWord (listCons Nat 84 (listNil Nat))
+def arrowFalseValue : Tag := tagWord (listCons Nat 70 (listNil Nat))
+def arrowStarValue : Tag := tagWord (listCons Nat 42 (listNil Nat))
+def arrowOmega : ArrowObject :=
+  let source : FinSet := listCons Tag arrowFalseValue (listCons Tag arrowStarValue (setSingleton arrowTrueValue)) in
+  let target : FinSet := listCons Tag arrowTrueValue (setSingleton arrowFalseValue) in
+  arrowObject (setMake source target (fun (x : Tag) => case (tagEqual x arrowFalseValue) with
+    | 0 (u : Unit) => arrowTrueValue | 1 (u : Unit) => arrowFalseValue))
+def arrowTruth : ArrowMorphism := tuple (arrowTerminal.0,
+  setMake arrowTerminal.0.0 arrowOmega.0 (fun (x : Tag) => arrowTrueValue),
+  setMake arrowTerminal.0.2 arrowOmega.2 (fun (x : Tag) => arrowTrueValue), arrowOmega)
+def setImageM : FinArrow -> Result FinSet := fun (h : FinArrow) =>
+  resultMap FinSet FinSet setNormal (listMapM Tag Tag (setApply h) h.0)
+def setInverseImage : FinArrow -> FinSet -> Result FinSet := fun (h : FinArrow) (s : FinSet) =>
+  resultMap FinGraph FinSet (fun (g : FinGraph) => setNormal
+    (listMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.0)
+      (listFilter (prod (Tag, Tag)) (fun (p : prod (Tag, Tag)) => setMember p.1 s) g)))
+    (listMapM Tag (prod (Tag, Tag)) (fun (x : Tag) => resultMap Tag (prod (Tag, Tag))
+      (fun (y : Tag) => tuple (x, y)) (setApply h x)) h.0)
+def arrowChi : ArrowMorphism -> Result ArrowMorphism := fun (m : ArrowMorphism) =>
+  bind FinSet ArrowMorphism (setImageM m.1) (fun (domImage : FinSet) =>
+  bind FinSet ArrowMorphism (setImageM m.2) (fun (codImage : FinSet) =>
+  bind FinSet ArrowMorphism (setInverseImage m.3.1 codImage) (fun (inverse : FinSet) =>
+    let dom : FinArrow := setMake m.3.0 arrowOmega.0 (fun (x : Tag) =>
+      case (setMember x domImage) with
+      | 0 (u : Unit) => (case (setMember x inverse) with | 0 (v : Unit) => arrowFalseValue | 1 (v : Unit) => arrowStarValue)
+      | 1 (u : Unit) => arrowTrueValue) in
+    let cod : FinArrow := setMake m.3.2 arrowOmega.2 (fun (x : Tag) => case (setMember x codImage) with
+      | 0 (u : Unit) => arrowFalseValue | 1 (u : Unit) => arrowTrueValue) in
+    let h : ArrowMorphism := tuple (m.3, dom, cod, arrowOmega) in
+    bind Bool ArrowMorphism (arrowCommutes h) (fun (commutes : Bool) =>
+      bind One ArrowMorphism (require commutes (illFormed textArrowCategory textRuleObligation))
+        (fun (u : One) => ok ArrowMorphism h)))))
+def arrowClassifier : Classifier ArrowObject ArrowMorphism := tuple (arrowOmega, arrowTruth,
+  (fun (m : ArrowMorphism) => bind ArrowMorphism (PullbackSquare ArrowMorphism) (arrowChi m) (fun (chi : ArrowMorphism) =>
+  resultMap ArrowMorphism (PullbackSquare ArrowMorphism) (fun (bang : ArrowMorphism) => tuple (arrowTruth, chi, bang, m,
+    (fun (f : ArrowMorphism) (q : ArrowMorphism) =>
+      bind FinArrow ArrowMorphism (setMakeM m.3.0 m.0.0 (setPreimage m.1)) (fun (dom : FinArrow) =>
+      bind FinArrow ArrowMorphism (setMakeM m.3.2 m.0.2 (setPreimage m.2)) (fun (cod : FinArrow) =>
+        arrowCategory.4 (tuple (m.3, dom, cod, m.0)) q))))) (arrowTerminal.1 m.0))))
+def arrowSentinelExponential : Exponentials ArrowObject ArrowMorphism :=
+  fun (a : ArrowObject) (b : ArrowObject) =>
+  err (Exponential ArrowObject ArrowMorphism) (unsupported textArrowCategory textUniversal)
+def arrowTopos : Topos ArrowObject ArrowMorphism := tuple (textArrowCategory, arrowSentinelExponential, arrowClassifier)

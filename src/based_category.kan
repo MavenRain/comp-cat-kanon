@@ -1,0 +1,34 @@
+def BasedArrow : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) => prod (Based O H S, TheoryArrow O H S, Based O H S)
+def basedEqual : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Based O H S -> Based O H S -> Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (a : Based O H S) (b : Based O H S) =>
+  let eq : Theory O H S -> Theory O H S -> Bool := theoryEqual O H S i in
+  boolAnd (eq a.0 b.0)
+    (boolAnd (listAll (Theory O H S) (fun (t : Theory O H S) => listMember (Theory O H S) eq t b.1) a.1)
+      (listAll (Theory O H S) (fun (t : Theory O H S) => listMember (Theory O H S) eq t a.1) b.1))
+def basedCategory : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Category (Based O H S) (BasedArrow O H S) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) =>
+  let B : Type 0 := Based O H S in
+  let BH : Type 0 := BasedArrow O H S in
+  let tc : Category (Theory O H S) (TheoryArrow O H S) := theoryCategory O H S i in
+  let eq : B -> B -> Bool := basedEqual O H S i in
+  tuple (tc.0, (fun (h : BH) => h.0), (fun (h : BH) => h.2), (fun (b : B) => tuple (b, tc.3 b.0, b)),
+    (fun (g : BH) (f : BH) => resultMap (TheoryArrow O H S) BH (fun (h : TheoryArrow O H S) => tuple (f.0, h, g.2)) (tc.4 g.1 f.1)), eq,
+    (fun (f : BH) (g : BH) => boolAnd (eq f.0 g.0) (boolAnd (tc.6 f.1 g.1) (eq f.2 g.2))),
+    (fun (b : B) => tc.7 b.0), (fun (h : BH) => tc.8 h.1))
+def ParallelObject : (0 H : Type 0) -> Type 0 := fun (0 H : Type 0) => prod (H, H)
+def ParallelArrow : (0 H : Type 0) -> Type 0 := fun (0 H : Type 0) => prod (ParallelObject H, H, ParallelObject H)
+def parallelGraphCategory : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Category (ParallelObject H) (ParallelArrow H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) =>
+  let eq : ParallelObject H -> ParallelObject H -> Bool := fun (a : ParallelObject H) (b : ParallelObject H) =>
+    boolAnd (c.6 a.0 b.0) (c.6 a.1 b.1) in
+  tuple (c.0, (fun (h : ParallelArrow H) => h.0), (fun (h : ParallelArrow H) => h.2),
+    (fun (o : ParallelObject H) => tuple (o, c.3 (c.1 o.0), o)),
+    (fun (g : ParallelArrow H) (f : ParallelArrow H) => resultMap H (ParallelArrow H)
+      (fun (h : H) => tuple (f.0, h, g.2)) (c.4 g.1 f.1)), eq,
+    (fun (f : ParallelArrow H) (g : ParallelArrow H) => boolAnd (eq f.0 g.0) (boolAnd (c.6 f.1 g.1) (eq f.2 g.2))),
+    (fun (o : ParallelObject H) => textAppend (c.8 o.0) (c.8 o.1)), (fun (h : ParallelArrow H) => c.8 h.1))
+def parallelIso : (0 O : Type 0) -> (0 H : Type 0) -> IsoCategory O H -> IsoCategory (ParallelObject H) (ParallelArrow H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : IsoCategory O H) =>
+  tuple (parallelGraphCategory O H c.0, (fun (h : ParallelArrow H) => c.1 h.1),
+    (fun (h : ParallelArrow H) => resultMap H (ParallelArrow H) (fun (inverse : H) => tuple (h.2, inverse, h.0)) (c.2 h.1)))

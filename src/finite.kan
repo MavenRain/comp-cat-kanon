@@ -1,0 +1,43 @@
+-- Finite category tables separate identities from named arrows.
+def FinHom : Type 0 := sum (Nat, Edge)
+def finId : Nat -> FinHom := fun (n : Nat) => inj 0 of 2 n
+def finNamed : Edge -> FinHom := fun (e : Edge) => inj 1 of 2 e
+def finSrc : FinHom -> Nat := fun (h : FinHom) =>
+  case h with | 0 (n : Nat) => n | 1 (e : Edge) => e.1
+def finTgt : FinHom -> Nat := fun (h : FinHom) =>
+  case h with | 0 (n : Nat) => n | 1 (e : Edge) => e.2
+def finEqual : FinHom -> FinHom -> Bool := fun (g : FinHom) (f : FinHom) =>
+  case g with
+  | 0 (n : Nat) => (case f with | 0 (m : Nat) => natEq n m | 1 (e : Edge) => false)
+  | 1 (e : Edge) => (case f with | 0 (n : Nat) => false | 1 (q : Edge) => natEq e.0 q.0)
+def finiteCategory : Shape -> (Nat -> Nat -> Result Nat) -> FiniteCategory Nat FinHom :=
+  fun (shape : Shape) (table : Nat -> Nat -> Result Nat) =>
+  let compose : FinHom -> FinHom -> Result FinHom := fun (g : FinHom) (f : FinHom) =>
+    bind One FinHom (require (natEq (finSrc g) (finTgt f)) (notComposable (listNil Nat) (listNil Nat) (listNil Nat)))
+      (fun (u : One) => case g with
+        | 0 (n : Nat) => ok FinHom f
+        | 1 (e : Edge) => (case f with
+          | 0 (n : Nat) => ok FinHom g
+          | 1 (q : Edge) => bind Nat FinHom (table e.0 q.0) (fun (id : Nat) =>
+            resultMap Edge FinHom finNamed (listFind Edge (fun (a : Edge) => natEq a.0 id)
+              (noSuchArrow (listNil Nat) (listNil Nat) (listNil Nat)) shape.1)))) in
+  let category : Category Nat FinHom := tuple (listNil Nat, finSrc, finTgt, finId, compose, natEq, finEqual,
+    (fun (n : Nat) => listNil Nat), (fun (h : FinHom) => listNil Nat)) in
+  let arrows : List FinHom := listAppend FinHom (listMap Edge FinHom finNamed shape.1) (listMap Nat FinHom finId shape.0) in
+  tuple (tuple (category, (fun (a : Nat) (b : Nat) =>
+    listFilter FinHom (fun (h : FinHom) => boolAnd (natEq (finSrc h) a) (natEq (finTgt h) b)) arrows)), shape.0, arrows)
+def noComposites : Nat -> Nat -> Result Nat := fun (g : Nat) (f : Nat) => err Nat (noSuchArrow (listNil Nat) (listNil Nat) (listNil Nat))
+def zeroCategory : FiniteCategory Nat FinHom := finiteCategory shapeEmpty noComposites
+def twoCategory : FiniteCategory Nat FinHom := finiteCategory shapeDiscreteTwo noComposites
+def parallelCategory : FiniteCategory Nat FinHom := finiteCategory shapeParallel noComposites
+def shapeSpan : Shape := tuple (listCons Nat 0 (listCons Nat 1 (listCons Nat 2 (listNil Nat))),
+  listCons Edge (tuple (0, 0, 1)) (listCons Edge (tuple (1, 0, 2)) (listNil Edge)))
+def shapeCospan : Shape := tuple (shapeSpan.0,
+  listCons Edge (tuple (0, 1, 0)) (listCons Edge (tuple (1, 2, 0)) (listNil Edge)))
+def spanCategory : FiniteCategory Nat FinHom := finiteCategory shapeSpan noComposites
+def cospanCategory : FiniteCategory Nat FinHom := finiteCategory shapeCospan noComposites
+def shapeTabulate : (0 O : Type 0) -> (0 H : Type 0) -> (O -> H) -> List (prod (Nat, O)) ->
+  List (prod (Nat, H)) -> Functor Nat FinHom O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (id : O -> H) (nodes : List (prod (Nat, O))) (edges : List (prod (Nat, H))) =>
+  tuple (listNil Nat, (fun (n : Nat) => listLookup O n nodes), (fun (h : FinHom) =>
+    case h with | 0 (n : Nat) => resultMap O H id (listLookup O n nodes) | 1 (e : Edge) => listLookup H e.0 edges))

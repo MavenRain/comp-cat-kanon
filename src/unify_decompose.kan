@@ -1,0 +1,68 @@
+def ParallelSubstitution : Type 0 := prod (Substitution, Substitution)
+def makeParallelSubstitution : Substitution -> Substitution -> Result ParallelSubstitution :=
+  fun (f : Substitution) (g : Substitution) =>
+  bind One ParallelSubstitution (require (boolAnd (setEqual f.0 g.0) (setEqual f.2 g.2))
+    (illFormed textFinKleisli textNotParallel)) (fun (u : One) => ok ParallelSubstitution (tuple (f, g)))
+def restrictParallel : FinSet -> ParallelSubstitution -> ParallelSubstitution :=
+  fun (s : FinSet) (p : ParallelSubstitution) => tuple (tuple (s, p.0.1, p.0.2), tuple (s, p.1.1, p.1.2))
+def sumCoequalize : (ParallelSubstitution -> Result Substitution) -> ParallelSubstitution -> ParallelSubstitution -> Result Substitution :=
+  fun (cq : ParallelSubstitution -> Result Substitution) (p : ParallelSubstitution) (next : ParallelSubstitution) =>
+  bind Substitution Substitution (cq p) (fun (q : Substitution) =>
+  bind Substitution Substitution (substCompose q next.0) (fun (qf : Substitution) =>
+  bind Substitution Substitution (substCompose q next.1) (fun (qg : Substitution) =>
+  bind Substitution Substitution (cq (tuple (qf, qg))) (fun (r : Substitution) => substCompose r q))))
+def compositeCoequalize : (ParallelSubstitution -> Result Substitution) -> ParallelSubstitution -> Substitution -> Result Substitution :=
+  fun (cq : ParallelSubstitution -> Result Substitution) (p : ParallelSubstitution) (h : Substitution) => cq p
+def sumDecompose : ParallelSubstitution -> Result (prod (ParallelSubstitution, ParallelSubstitution)) :=
+  fun (p : ParallelSubstitution) => case (natLt 1 (setCardinality p.0.0)) with
+  | 0 (u : Unit) => err (prod (ParallelSubstitution, ParallelSubstitution)) (irreducible textFinKleisli)
+  | 1 (u : Unit) => resultMap (prod (FinSet, FinSet)) (prod (ParallelSubstitution, ParallelSubstitution))
+      (fun (s : prod (FinSet, FinSet)) => tuple (restrictParallel s.0 p, restrictParallel s.1 p)) (setSplit p.0.0)
+def topSame : Term -> Term -> Bool := fun (s : Term) (t : Term) =>
+  match s as self in Term return Bool with
+  | termVar x => false
+  | termApply op args => (match t as other in Term return Bool with
+    | termVar x => false | termApply op2 args2 => operatorEqual op op2)
+def unifyWitness : ParallelSubstitution -> Result Tag := fun (p : ParallelSubstitution) =>
+  listFind Tag (fun (x : Tag) => topSame (p.0.1 x) (p.1.1 x)) noWitness p.0.0
+def decompositionDispatch : Substitution -> TermArgs -> Tag -> Term :=
+  fun (original : Substitution) (args : TermArgs) (e : Tag) =>
+  match (tagSplit e) as r in Result return Term with
+  | failure err => termVar e
+  | success side => (case side.0 with
+    | 0 (u : Unit) => original.1 side.1
+    | 1 (u : Unit) => (match (termArgsLookup args side.1) as r2 in Result return Term with
+      | failure err => termVar e | success t => t))
+def compositeDecompose : ParallelSubstitution -> Result (prod (ParallelSubstitution, Substitution)) :=
+  fun (p : ParallelSubstitution) => bind Tag (prod (ParallelSubstitution, Substitution)) (unifyWitness p) (fun (x : Tag) =>
+  match (p.0.1 x) as first in Term return Result (prod (ParallelSubstitution, Substitution)) with
+  | termVar v => err (prod (ParallelSubstitution, Substitution)) (irreducible textFinKleisli)
+  | termApply op s => (match (p.1.1 x) as second in Term return Result (prod (ParallelSubstitution, Substitution)) with
+    | termVar v => err (prod (ParallelSubstitution, Substitution)) (irreducible textFinKleisli)
+    | termApply op2 t =>
+      let c : FinSet := setUnion (listMap Tag Tag (fun (z : Tag) => tagPink z) (setRemove x p.0.0))
+        (listMap Tag Tag (fun (w : Tag) => tagBlue w) op.1) in
+      let f : Substitution := tuple (c, decompositionDispatch p.0 s, p.0.2) in
+      let g : Substitution := tuple (c, decompositionDispatch p.1 t, p.0.2) in
+      let h : Substitution := tuple (p.0.0, (fun (z : Tag) => case (tagEqual x z) with
+        | 0 (u : Unit) => termVar (tagPink z)
+        | 1 (u : Unit) => application op (fun (y : Tag) => termVar (tagBlue y))), c) in
+      ok (prod (ParallelSubstitution, Substitution)) (tuple (tuple (f, g), h))))
+def irreducibleUnify : ParallelSubstitution -> Result Substitution := fun (p : ParallelSubstitution) =>
+  match p.0.0 as source in List return Result Substitution with
+  | nil => ok Substitution (substIdentity p.0.2)
+  | cons x xs =>
+    let s : Term := p.0.1 x in
+    let t : Term := p.1.1 x in
+    (match s as first in Term return Result Substitution with
+    | termVar z => (match t as second in Term return Result Substitution with
+      | termVar y => ok Substitution (unitUnify z t p.0.2
+          (case (tagEqual z y) with | 0 (u : Unit) => setRemove z p.0.2 | 1 (u : Unit) => p.0.2))
+      | termApply op args => (case (termOccurs t z) with
+        | 0 (u : Unit) => ok Substitution (unitUnify z t p.0.2 (setRemove z p.0.2))
+        | 1 (u : Unit) => err Substitution (cyclic (tagText z) (termText t))))
+    | termApply op args => (match t as second in Term return Result Substitution with
+      | termVar z => (case (termOccurs s z) with
+        | 0 (u : Unit) => ok Substitution (unitUnify z s p.0.2 (setRemove z p.0.2))
+        | 1 (u : Unit) => err Substitution (cyclic (tagText z) (termText s)))
+      | termApply op2 args2 => err Substitution (clash (termText s) (termText t))))

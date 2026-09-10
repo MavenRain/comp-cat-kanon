@@ -1,0 +1,33 @@
+--- a/surface/elab.ml
++++ b/surface/elab.ml
+@@ -196 +196 @@
+-           ~some:(fun (r : mu_ref) -> elab_mu_ref c r [])
++            ~some:(fun (r : mu_ref) -> elab_mu_ref c ~expected r [])
+@@ -229 +229 @@
+-  | Syntax.SApp (f, a) -> elab_app c f a
++  | Syntax.SApp (f, a) -> elab_app c ~expected f a
+@@ -383 +383 @@
+-and elab_app (c : Check.ctx) (f : Syntax.t) (a : Syntax.t) : (Term.t, Error.t) result =
++and elab_app (c : Check.ctx) ~(expected : Value.t option) (f : Syntax.t) (a : Syntax.t) : (Term.t, Error.t) result =
+@@ -388 +388 @@
+-       ~some:(fun (r : mu_ref) -> fun () -> elab_mu_ref c r args)
++        ~some:(fun (r : mu_ref) -> fun () -> elab_mu_ref c ~expected r args)
+@@ -408 +408 @@
+-and elab_mu_ref (c : Check.ctx) (r : mu_ref) (args : Syntax.t list) :
++and elab_mu_ref (c : Check.ctx) ~(expected : Value.t option) (r : mu_ref) (args : Syntax.t list) :
+@@ -412 +412 @@
+-  | RCtor (f, ct) -> elab_ctor_ref c f ct args
++  | RCtor (f, ct) -> elab_ctor_ref c ~expected f ct args
+@@ -440 +440 @@
+-and elab_ctor_ref (c : Check.ctx) (f : Positivity.family) (ct : Positivity.ctor)
++and elab_ctor_ref (c : Check.ctx) ~(expected : Value.t option) (f : Positivity.family) (ct : Positivity.ctor)
+@@ -449 +449,8 @@
+-        Error (no_expect ("the constructor " ^ ct.Positivity.c_name))
++        (* Unindexed parameter sections are supplied by the checking rule.
++           Retain the refusal for indexed families: their result indices
++           require opening the parameter environment before evaluation. *)
++        (match f.Positivity.f_indices with
++         | [] -> Option.fold
++             ~none:(Error (no_expect ("the constructor " ^ ct.Positivity.c_name)))
++             ~some:(fun (_ty : Value.t) -> Ok ()) expected
++         | _ :: _ -> Error (no_expect ("the constructor " ^ ct.Positivity.c_name)))

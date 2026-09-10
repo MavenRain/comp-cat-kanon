@@ -1,0 +1,61 @@
+-- Generated exhaustive formula destructors.
+def asAlways : (0 A : Type 0) -> Temporal A -> Result (Temporal A) :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  match p as self in Temporal return Result (Temporal A) with
+  | tlTrue  => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlFalse  => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlState name pred => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAction name pred => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAnd left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlOr left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlNot body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlImplies left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlLater body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlNext body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAlways body => ok (Temporal A) (body)
+  | tlEventually body => err (Temporal A) (illFormed textRule textRuleShape)
+def asEventually : (0 A : Type 0) -> Temporal A -> Result (Temporal A) :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  match p as self in Temporal return Result (Temporal A) with
+  | tlTrue  => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlFalse  => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlState name pred => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAction name pred => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAnd left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlOr left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlNot body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlImplies left right => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlLater body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlNext body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlAlways body => err (Temporal A) (illFormed textRule textRuleShape)
+  | tlEventually body => ok (Temporal A) (body)
+def asImplies : (0 A : Type 0) -> Temporal A -> Result (prod (Temporal A, Temporal A)) :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  match p as self in Temporal return Result (prod (Temporal A, Temporal A)) with
+  | tlTrue  => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlFalse  => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlState name pred => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAction name pred => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAnd left right => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlOr left right => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlNot body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlImplies left right => ok (prod (Temporal A, Temporal A)) (tuple (left, right))
+  | tlLater body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlNext body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAlways body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlEventually body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+def asAnd : (0 A : Type 0) -> Temporal A -> Result (prod (Temporal A, Temporal A)) :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  match p as self in Temporal return Result (prod (Temporal A, Temporal A)) with
+  | tlTrue  => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlFalse  => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlState name pred => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAction name pred => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAnd left right => ok (prod (Temporal A, Temporal A)) (tuple (left, right))
+  | tlOr left right => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlNot body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlImplies left right => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlLater body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlNext body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlAlways body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)
+  | tlEventually body => err (prod (Temporal A, Temporal A)) (illFormed textRule textRuleShape)

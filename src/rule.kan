@@ -1,0 +1,85 @@
+def Fact : (0 A : Type 0) -> Type 0 := fun (0 A : Type 0) => prod (Temporal A, Temporal A)
+def assume : (0 A : Type 0) -> Temporal A -> Temporal A -> Fact A :=
+  fun (0 A : Type 0) (spec : Temporal A) (goal : Temporal A) => tuple (spec, goal)
+def asLeadsTo : (0 A : Type 0) -> Temporal A -> Result (prod (Temporal A, Temporal A)) :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  bind (Temporal A) (prod (Temporal A, Temporal A)) (asAlways A p) (fun (body : Temporal A) =>
+  bind (prod (Temporal A, Temporal A)) (prod (Temporal A, Temporal A)) (asImplies A body) (fun (pair : prod (Temporal A, Temporal A)) =>
+    resultMap (Temporal A) (prod (Temporal A, Temporal A)) (fun (q : Temporal A) => tuple (pair.0, q)) (asEventually A pair.1)))
+def asAlwaysImplies : (0 A : Type 0) -> Temporal A -> Result (prod (Temporal A, Temporal A)) :=
+  fun (0 A : Type 0) (p : Temporal A) => bind (Temporal A) (prod (Temporal A, Temporal A)) (asAlways A p) (asImplies A)
+def ruleCheck : Bool -> Result One := fun (valid : Bool) => require valid (illFormed textRule textRuleShape)
+def sameSpec : (0 A : Type 0) -> Fact A -> Fact A -> Bool :=
+  fun (0 A : Type 0) (a : Fact A) (b : Fact A) => temporalEqual A a.0 b.0
+def leadsToSelf : (0 A : Type 0) -> Temporal A -> Temporal A -> Fact A :=
+  fun (0 A : Type 0) (spec : Temporal A) (p : Temporal A) => tuple (spec, leadsTo A p p)
+def leadsToTrans : (0 A : Type 0) -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (a : Fact A) (b : Fact A) =>
+  bind One (Fact A) (ruleCheck (sameSpec A a b)) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A a.1) (fun (pq : prod (Temporal A, Temporal A)) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A b.1) (fun (qr : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A pq.1 qr.0)) (fun (u : One) => ok (Fact A) (tuple (a.0, leadsTo A pq.0 qr.1))))))
+def orLeadsTo : (0 A : Type 0) -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (a : Fact A) (b : Fact A) =>
+  bind One (Fact A) (ruleCheck (sameSpec A a b)) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A a.1) (fun (pr : prod (Temporal A, Temporal A)) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A b.1) (fun (qr : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A pr.1 qr.1)) (fun (u : One) =>
+    ok (Fact A) (tuple (a.0, leadsTo A (temporalOr A pr.0 qr.0) pr.1))))))
+def leadsToWeaken : (0 A : Type 0) -> Fact A -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (pre : Fact A) (post : Fact A) (f : Fact A) =>
+  bind One (Fact A) (ruleCheck (boolAnd (sameSpec A pre f) (sameSpec A post f))) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asAlwaysImplies A pre.1) (fun (p : prod (Temporal A, Temporal A)) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asAlwaysImplies A post.1) (fun (q : prod (Temporal A, Temporal A)) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A f.1) (fun (pq : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (boolAnd (temporalEqual A p.1 pq.0) (temporalEqual A q.0 pq.1))) (fun (u : One) =>
+    ok (Fact A) (tuple (f.0, leadsTo A p.0 q.1)))))))
+def leadsToApply : (0 A : Type 0) -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (initial : Fact A) (f : Fact A) =>
+  bind One (Fact A) (ruleCheck (sameSpec A initial f)) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A f.1) (fun (pq : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A initial.1 pq.0)) (fun (u : One) =>
+    ok (Fact A) (tuple (f.0, temporalEventually A pq.1)))))
+def borrowInvariant : (0 A : Type 0) -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (invariant : Fact A) (f : Fact A) =>
+  bind One (Fact A) (ruleCheck (sameSpec A invariant f)) (fun (u : One) =>
+  bind (Temporal A) (Fact A) (asAlways A invariant.1) (fun (j : Temporal A) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A f.1) (fun (premise : prod (Temporal A, Temporal A)) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asAnd A premise.0) (fun (pj : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A j pj.1)) (fun (u : One) =>
+    ok (Fact A) (tuple (f.0, leadsTo A pj.0 premise.1)))))))
+def isStateFormula : (0 A : Type 0) -> Temporal A -> Bool := fun (0 A : Type 0) (p : Temporal A) =>
+  let key : FormulaKey := formulaKey A p in
+  match key as self in FormulaKey return Bool with | keyAtom kind name => natEq kind 2 | keyUnary k a => false | keyBinary k a b => false
+def isActionFormula : (0 A : Type 0) -> Temporal A -> Bool := fun (0 A : Type 0) (p : Temporal A) =>
+  let key : FormulaKey := formulaKey A p in
+  match key as self in FormulaKey return Bool with | keyAtom kind name => natEq kind 3 | keyUnary k a => false | keyBinary k a b => false
+def initInvariant : (0 A : Type 0) -> Temporal A -> Temporal A -> (One -> Result Bool) -> (One -> Result Bool) ->
+  Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (spec : Temporal A) (inv : Temporal A) (base : One -> Result Bool) (step : One -> Result Bool)
+    (initial : Fact A) (next : Fact A) =>
+  bind One (Fact A) (ruleCheck (boolAnd (temporalEqual A spec initial.0) (temporalEqual A spec next.0))) (fun (u : One) =>
+  bind One (Fact A) (ruleCheck (boolAnd (isStateFormula A inv) (isStateFormula A initial.1))) (fun (u : One) =>
+  bind (Temporal A) (Fact A) (asAlways A next.1) (fun (nextBody : Temporal A) =>
+  bind One (Fact A) (ruleCheck (isActionFormula A nextBody)) (fun (u : One) =>
+  bind Bool (Fact A) (base one) (fun (b : Bool) =>
+  bind One (Fact A) (ruleCheck b) (fun (u : One) =>
+  bind Bool (Fact A) (step one) (fun (s : Bool) =>
+  bind One (Fact A) (ruleCheck s) (fun (u : One) => ok (Fact A) (tuple (spec, temporalAlways A inv))))))))))
+def wf1 : (0 A : Type 0) -> Temporal A -> Temporal A -> Temporal A ->
+  (One -> Result Bool) -> (One -> Result Bool) -> Fact A -> Fact A -> Fact A -> Result (Fact A) :=
+  fun (0 A : Type 0) (spec : Temporal A) (pre : Temporal A) (post : Temporal A)
+    (closure : One -> Result Bool) (drives : One -> Result Bool) (next : Fact A) (enabled : Fact A) (fair : Fact A) =>
+  bind One (Fact A) (ruleCheck (boolAnd (temporalEqual A spec next.0)
+    (boolAnd (temporalEqual A spec enabled.0) (temporalEqual A spec fair.0)))) (fun (u : One) =>
+  bind One (Fact A) (ruleCheck (boolAnd (isStateFormula A pre) (isStateFormula A post))) (fun (u : One) =>
+  bind (Temporal A) (Fact A) (asAlways A next.1) (fun (body : Temporal A) =>
+  bind One (Fact A) (ruleCheck (isActionFormula A body)) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asAlwaysImplies A enabled.1) (fun (pe : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A pe.0 pre)) (fun (u : One) =>
+  bind (prod (Temporal A, Temporal A)) (Fact A) (asLeadsTo A fair.1) (fun (fp : prod (Temporal A, Temporal A)) =>
+  bind One (Fact A) (ruleCheck (temporalEqual A fp.0 (temporalAlways A pe.1))) (fun (u : One) =>
+  bind Bool (Fact A) (closure one) (fun (c : Bool) =>
+  bind One (Fact A) (ruleCheck c) (fun (u : One) =>
+  bind Bool (Fact A) (drives one) (fun (d : Bool) =>
+  bind One (Fact A) (ruleCheck d) (fun (u : One) => ok (Fact A) (tuple (spec, leadsTo A pre post))))))))))))))

@@ -1,0 +1,25 @@
+def tCycle : Behavior Nat := lasso Nat (listNil Nat) 0 (listCons Nat 1 (listNil Nat))
+def tAllZero : Behavior Nat := lasso Nat (listNil Nat) 0 (listNil Nat)
+def tStream : Behavior Nat := stream Nat stageNat
+def tPredZero : Temporal Nat := temporalState Nat textNode (natEq 0)
+def testTemporalEventually : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsTrue
+  (temporalHolds Nat tFuel (temporalEventually Nat tPredZero) tCycle)))
+def testTemporalAlwaysFalse : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsFalse
+  (temporalHolds Nat tFuel (temporalAlways Nat tPredZero) tCycle)))
+def testTemporalAlwaysTrue : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsTrue
+  (temporalHolds Nat tFuel (temporalAlways Nat tPredZero) tAllZero)))
+def testTemporalDepth : Nat := boolNat (resultHolds (resultMap OmegaValue Bool
+  (fun (v : OmegaValue) => boolAnd (omegaLeq v (omegaFinite 1)) (omegaLeq (omegaFinite 1) v))
+  (temporalDepth Nat tFuel (temporalAlways Nat tPredZero) tCycle)))
+def testTemporalClassicalNeg : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsTrue
+  (temporalHolds Nat tFuel (temporalNot Nat (temporalAlways Nat tPredZero)) tCycle)))
+def testTemporalStreamUnknown : Nat := boolNat (resultHolds (resultMap Verdict Bool
+  (fun (v : Verdict) => boolAnd (boolNot (verdictIsTrue v)) (boolNot (verdictIsFalse v)))
+  (temporalHolds Nat tFuel (temporalEventually Nat (temporalState Nat textEdge (natEq 100))) tStream)))
+def testTemporalStreamConfirm : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsTrue
+  (temporalHolds Nat tFuel (temporalEventually Nat tPredZero) tStream)))
+def testTemporalStreamRefute : Nat := boolNat (resultHolds (resultMap Verdict Bool verdictIsFalse
+  (temporalHolds Nat tFuel (temporalAlways Nat tPredZero) tStream)))
+def testBehaviorShift : Nat := boolNat (natEq (behaviorNth Nat tCycle (stageSucc (stageSucc stageZero))) 0)
+def testTemporalEquality : Nat := boolNat (temporalEqual Nat
+  (leadsTo Nat tPredZero tPredZero) (leadsTo Nat (temporalState Nat textNode (natEq 0)) tPredZero))

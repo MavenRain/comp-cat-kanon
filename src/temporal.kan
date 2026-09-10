@@ -1,0 +1,44 @@
+def leadsTo : (0 A : Type 0) -> Temporal A -> Temporal A -> Temporal A :=
+  fun (0 A : Type 0) (p : Temporal A) (q : Temporal A) => temporalAlways A (temporalImplies A p (temporalEventually A q))
+def stable : (0 A : Type 0) -> Temporal A -> Temporal A :=
+  fun (0 A : Type 0) (p : Temporal A) => temporalImplies A p (temporalAlways A p)
+def weakFairness : (0 A : Type 0) -> Text -> (A -> Bool) -> Text -> (A -> A -> Bool) -> Temporal A :=
+  fun (0 A : Type 0) (preName : Text) (pre : A -> Bool) (actName : Text) (act : A -> A -> Bool) =>
+  leadsTo A (temporalAlways A (temporalState A preName pre)) (temporalAction A actName act)
+def temporalForall : (0 I : Type 0) -> (0 A : Type 0) -> (I -> Temporal A) -> List I -> Temporal A :=
+  fun (0 I : Type 0) (0 A : Type 0) (f : I -> Temporal A) (domain : List I) =>
+  listFold I (Temporal A) domain (temporalTrue A) (fun (p : Temporal A) (i : I) => temporalAnd A p (f i))
+def temporalExists : (0 I : Type 0) -> (0 A : Type 0) -> (I -> Temporal A) -> List I -> Temporal A :=
+  fun (0 I : Type 0) (0 A : Type 0) (f : I -> Temporal A) (domain : List I) =>
+  listFold I (Temporal A) domain (temporalFalse A) (fun (p : Temporal A) (i : I) => temporalOr A p (f i))
+
+-- Predicate names, rather than closure identity, identify atoms as in OCaml.
+mu FormulaKey : Type 0 :=
+| keyAtom (kind : Nat) (name : Text) : FormulaKey
+| keyUnary (kind : Nat) (body : FormulaKey) : FormulaKey
+| keyBinary (kind : Nat) (left : FormulaKey) (right : FormulaKey) : FormulaKey
+def rec formulaKey : (0 A : Type 0) -> Temporal A -> FormulaKey :=
+  fun (0 A : Type 0) (p : Temporal A) =>
+  match p as self in Temporal return FormulaKey with
+  | tlTrue => keyAtom 0 (listNil Nat) | tlFalse => keyAtom 1 (listNil Nat)
+  | tlState name pred => keyAtom 2 name | tlAction name pred => keyAtom 3 name
+  | tlAnd a b => keyBinary 4 (formulaKey A a) (formulaKey A b)
+  | tlOr a b => keyBinary 5 (formulaKey A a) (formulaKey A b)
+  | tlNot a => keyUnary 6 (formulaKey A a)
+  | tlImplies a b => keyBinary 7 (formulaKey A a) (formulaKey A b)
+  | tlLater a => keyUnary 8 (formulaKey A a) | tlNext a => keyUnary 9 (formulaKey A a)
+  | tlAlways a => keyUnary 10 (formulaKey A a) | tlEventually a => keyUnary 11 (formulaKey A a)
+def rec formulaKeyEqual : FormulaKey -> FormulaKey -> Bool := fun (a : FormulaKey) (b : FormulaKey) =>
+  match a as self in FormulaKey return Bool with
+  | keyAtom k n => (match b as other in FormulaKey return Bool with
+    | keyAtom k2 n2 => boolAnd (natEq k k2) (listEqual Nat natEq n n2)
+    | keyUnary k2 p => false | keyBinary k2 p q => false)
+  | keyUnary k p => (match b as other in FormulaKey return Bool with
+    | keyAtom k2 n => false | keyBinary k2 x y => false
+    | keyUnary k2 q => boolAnd (natEq k k2) (formulaKeyEqual p q))
+  | keyBinary k p q => (match b as other in FormulaKey return Bool with
+    | keyAtom k2 n => false | keyUnary k2 x => false
+    | keyBinary k2 x y => boolAnd (natEq k k2) (boolAnd (formulaKeyEqual p x) (formulaKeyEqual q y)))
+def temporalEqual : (0 A : Type 0) -> Temporal A -> Temporal A -> Bool :=
+  fun (0 A : Type 0) (a : Temporal A) (b : Temporal A) => formulaKeyEqual (formulaKey A a) (formulaKey A b)
+def temporalNormalise : (0 A : Type 0) -> Temporal A -> Temporal A := fun (0 A : Type 0) (p : Temporal A) => p

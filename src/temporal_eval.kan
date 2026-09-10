@@ -1,0 +1,74 @@
+def gradeSuccessors : Stage -> List OmegaValue -> Result (List OmegaValue) :=
+  fun (stem : Stage) (grades : List OmegaValue) =>
+  resultMap OmegaValue (List OmegaValue) (fun (head : OmegaValue) =>
+    listAppend OmegaValue (listTail OmegaValue grades) (listCons OmegaValue head (listNil OmegaValue)))
+    (listHead OmegaValue (listDropStage OmegaValue stem grades))
+def gradeCombine : (OmegaValue -> OmegaValue -> OmegaValue) -> Result (List OmegaValue) ->
+  Result (List OmegaValue) -> Result (List OmegaValue) :=
+  fun (f : OmegaValue -> OmegaValue -> OmegaValue) (left : Result (List OmegaValue)) (right : Result (List OmegaValue)) =>
+  bind (List OmegaValue) (List OmegaValue) left (fun (a : List OmegaValue) =>
+  bind (List OmegaValue) (List OmegaValue) right (fun (b : List OmegaValue) => listZipWith OmegaValue OmegaValue OmegaValue f a b))
+def rec gradeLasso : (0 A : Type 0) -> Temporal A -> List A -> Stage -> Result (List OmegaValue) :=
+  fun (0 A : Type 0) (p : Temporal A) (states : List A) (stem : Stage) =>
+  match p as self in Temporal return Result (List OmegaValue) with
+  | tlTrue => ok (List OmegaValue) (listMap A OmegaValue (fun (state : A) => omegaTop) states)
+  | tlFalse => ok (List OmegaValue) (listMap A OmegaValue (fun (state : A) => omegaBottom) states)
+  | tlState name pred => ok (List OmegaValue) (listMap A OmegaValue (fun (state : A) =>
+    case (pred state) with | 0 (u : Unit) => omegaBottom | 1 (u : Unit) => omegaTop) states)
+  | tlAction name pred => bind A (List OmegaValue) (listHead A (listDropStage A stem states)) (fun (loopHead : A) =>
+    listZipWith A A OmegaValue (fun (s : A) (t : A) =>
+      case (pred s t) with | 0 (u : Unit) => omegaBottom | 1 (u : Unit) => omegaTop)
+      states (listAppend A (listTail A states) (listCons A loopHead (listNil A))))
+  | tlAnd a b => gradeCombine omegaMeet (gradeLasso A a states stem) (gradeLasso A b states stem)
+  | tlOr a b => gradeCombine omegaJoin (gradeLasso A a states stem) (gradeLasso A b states stem)
+  | tlNot a => resultMap (List OmegaValue) (List OmegaValue)
+    (listMap OmegaValue OmegaValue (fun (v : OmegaValue) => omegaNeg (omegaClassical v))) (gradeLasso A a states stem)
+  | tlImplies a b => gradeCombine (fun (x : OmegaValue) (y : OmegaValue) => omegaImplies (omegaClassical x) y)
+    (gradeLasso A a states stem) (gradeLasso A b states stem)
+  | tlLater a => resultMap (List OmegaValue) (List OmegaValue) (listMap OmegaValue OmegaValue omegaSucc) (gradeLasso A a states stem)
+  | tlNext a => bind (List OmegaValue) (List OmegaValue) (gradeLasso A a states stem) (gradeSuccessors stem)
+  | tlAlways a => bind (List OmegaValue) (List OmegaValue) (gradeLasso A a states stem) (fun (base : List OmegaValue) =>
+    listFoldM One (List OmegaValue) (fuelSucc (fuelSucc (listMap A One (fun (s : A) => one) states)))
+      (listMap A OmegaValue (fun (s : A) => omegaTop) states)
+      (fun (current : List OmegaValue) (tick : One) =>
+        bind (List OmegaValue) (List OmegaValue) (gradeSuccessors stem current) (fun (next : List OmegaValue) =>
+          listZipWith OmegaValue OmegaValue OmegaValue (fun (x : OmegaValue) (y : OmegaValue) => omegaMeet x (omegaSucc y)) base next)))
+  | tlEventually a => bind (List OmegaValue) (List OmegaValue) (gradeLasso A a states stem) (fun (base : List OmegaValue) =>
+    listFoldM One (List OmegaValue) (fuelSucc (fuelSucc (listMap A One (fun (s : A) => one) states)))
+      (listMap A OmegaValue (fun (s : A) => omegaBottom) states)
+      (fun (current : List OmegaValue) (tick : One) =>
+        bind (List OmegaValue) (List OmegaValue) (gradeSuccessors stem current) (fun (next : List OmegaValue) =>
+          listZipWith OmegaValue OmegaValue OmegaValue omegaJoin base next)))
+
+def rec holdsStream : (0 A : Type 0) -> Temporal A -> Fuel -> Behavior A -> Verdict :=
+  fun (0 A : Type 0) (p : Temporal A) (fuel : Fuel) (b : Behavior A) =>
+  match p as self in Temporal return Verdict with
+  | tlTrue => verdictTrue
+  | tlFalse => verdictFalse
+  | tlState name pred => verdictOfBool (pred (behaviorHead A b))
+  | tlAction name pred => verdictOfBool (pred (behaviorHead A b) (behaviorHead A (behaviorShift A b)))
+  | tlAnd left right => verdictAnd (holdsStream A left fuel b) (holdsStream A right fuel b)
+  | tlOr left right => verdictOr (holdsStream A left fuel b) (holdsStream A right fuel b)
+  | tlNot body => verdictNeg (holdsStream A body fuel b)
+  | tlImplies left right => verdictImplies (holdsStream A left fuel b) (holdsStream A right fuel b)
+  | tlLater body => holdsStream A body fuel b
+  | tlNext body => holdsStream A body fuel (behaviorShift A b)
+  | tlAlways body => (case (listAny Stage (fun (k : Stage) => verdictIsFalse
+    (holdsStream A body fuel (behaviorShiftBy A b k))) (stagesThrough fuel)) with
+      | 0 (u : Unit) => verdictUnknown | 1 (u : Unit) => verdictFalse)
+  | tlEventually body => (case (listAny Stage (fun (k : Stage) => verdictIsTrue
+    (holdsStream A body fuel (behaviorShiftBy A b k))) (stagesThrough fuel)) with
+      | 0 (u : Unit) => verdictUnknown | 1 (u : Unit) => verdictTrue)
+def temporalDepth : (0 A : Type 0) -> Fuel -> Temporal A -> Behavior A -> Result OmegaValue :=
+  fun (0 A : Type 0) (fuel : Fuel) (p : Temporal A) (b : Behavior A) =>
+  match b as self in Behavior return Result OmegaValue with
+  | behaviorStream state => ok OmegaValue
+    (case (verdictIsTrue (holdsStream A p fuel b)) with | 0 (u : Unit) => omegaBottom | 1 (u : Unit) => omegaTop)
+  | behaviorLasso stem head tail => bind (List OmegaValue) OmegaValue
+    (gradeLasso A p (listAppend A stem (listCons A head tail)) (listMap A One (fun (s : A) => one) stem)) (listHead OmegaValue)
+def temporalHolds : (0 A : Type 0) -> Fuel -> Temporal A -> Behavior A -> Result Verdict :=
+  fun (0 A : Type 0) (fuel : Fuel) (p : Temporal A) (b : Behavior A) =>
+  match b as self in Behavior return Result Verdict with
+  | behaviorStream state => ok Verdict (holdsStream A p fuel b)
+  | behaviorLasso stem head tail => resultMap OmegaValue Verdict
+    (fun (grade : OmegaValue) => verdictOfBool (omegaIsTrue grade)) (temporalDepth A fuel p b)

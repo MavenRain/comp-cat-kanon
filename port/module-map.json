@@ -1,0 +1,423 @@
+[
+  {
+    "source": "lib/book/ch2_sets",
+    "kanon": [
+      "src/book.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch3_categories",
+    "kanon": [
+      "src/finite.kan",
+      "src/runtime.kan",
+      "src/instances.kan",
+      "src/book.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch4_limits",
+    "kanon": [
+      "src/relations.kan",
+      "src/finset.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch5_constructing",
+    "kanon": [
+      "src/comma.kan",
+      "src/functor_colimit.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch6_adjunctions",
+    "kanon": [
+      "src/adjunction.kan",
+      "src/book.kan",
+      "src/based_category.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch7_toposes",
+    "kanon": [
+      "src/topos.kan",
+      "src/set_topos.kan",
+      "src/arrow_topos.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch8_unify",
+    "kanon": [
+      "src/unify.kan",
+      "src/unify_decompose.kan"
+    ]
+  },
+  {
+    "source": "lib/book/ch9_theories",
+    "kanon": [
+      "src/theories.kan",
+      "src/theory_language.kan",
+      "src/based_category.kan"
+    ]
+  },
+  {
+    "source": "lib/book/index",
+    "kanon": [
+      "src/book.kan",
+      "src/relations.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/category",
+    "kanon": [
+      "src/category.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/adjunction",
+    "kanon": [
+      "src/adjunction.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/coequalizer",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/colimit",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/coproduct",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/elements",
+    "kanon": [
+      "src/elements.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/end_coend",
+    "kanon": [
+      "src/end_coend.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/equalizer",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/exponential",
+    "kanon": [
+      "src/topos.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/factorization",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/free_algebra",
+    "kanon": [
+      "src/omega.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/initial",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/limit",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/omega",
+    "kanon": [
+      "src/omega.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/product",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/pullback",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/pushout",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/shapes",
+    "kanon": [
+      "src/finite.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/subobject",
+    "kanon": [
+      "src/topos.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/terminal_obj",
+    "kanon": [
+      "src/collapse.kan"
+    ]
+  },
+  {
+    "source": "lib/collapse/topos",
+    "kanon": [
+      "src/topos.kan"
+    ]
+  },
+  {
+    "source": "lib/core/diagram",
+    "kanon": [
+      "src/category.kan"
+    ]
+  },
+  {
+    "source": "lib/core/err",
+    "kanon": [
+      "src/core.kan",
+      "src/text.kan"
+    ]
+  },
+  {
+    "source": "lib/core/fnct",
+    "kanon": [
+      "src/category.kan",
+      "src/adapters.kan",
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/core/memo",
+    "kanon": [
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/core/res",
+    "kanon": [
+      "src/core.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/core/shape",
+    "kanon": [
+      "src/category.kan",
+      "src/finite.kan"
+    ]
+  },
+  {
+    "source": "lib/engine",
+    "kanon": [
+      "src/engine.kan"
+    ]
+  },
+  {
+    "source": "lib/ground",
+    "kanon": [
+      "src/category.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/arrow_cat",
+    "kanon": [
+      "src/instances.kan",
+      "src/arrow_topos.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/fingraph",
+    "kanon": [
+      "src/instances.kan",
+      "src/book.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/finkleisli",
+    "kanon": [
+      "src/finkleisli.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/finset",
+    "kanon": [
+      "src/finset.kan",
+      "src/book.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/tag",
+    "kanon": [
+      "src/tag.kan",
+      "src/set_topos.kan"
+    ]
+  },
+  {
+    "source": "lib/instances/theories",
+    "kanon": [
+      "src/theory_core.kan",
+      "src/theories.kan",
+      "src/based_category.kan"
+    ]
+  },
+  {
+    "source": "lib/iso",
+    "kanon": [
+      "src/collapse.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/kan",
+    "kanon": [
+      "src/kan.kan"
+    ]
+  },
+  {
+    "source": "lib/laws",
+    "kanon": [
+      "src/laws.kan"
+    ]
+  },
+  {
+    "source": "lib/prod_cat",
+    "kanon": [
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/cat_data",
+    "kanon": [
+      "src/category.kan",
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/comma",
+    "kanon": [
+      "src/comma.kan",
+      "src/adapters.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/discrete",
+    "kanon": [
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/driver",
+    "kanon": [
+      "src/kan.kan",
+      "src/collapse.kan",
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/fin",
+    "kanon": [
+      "src/finite.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/functor_cat",
+    "kanon": [
+      "src/runtime.kan",
+      "src/functor_colimit.kan"
+    ]
+  },
+  {
+    "source": "lib/runtime/path",
+    "kanon": [
+      "src/runtime.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/behaviour",
+    "kanon": [
+      "src/temporal_core.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/later",
+    "kanon": [
+      "src/trees.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/omega_val",
+    "kanon": [
+      "src/temporal_core.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/rule",
+    "kanon": [
+      "src/rule.kan",
+      "src/temporal_destructors.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/temporal",
+    "kanon": [
+      "src/temporal.kan",
+      "src/temporal_core.kan",
+      "src/temporal_constructors.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/temporal_eval",
+    "kanon": [
+      "src/temporal_eval.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/trees",
+    "kanon": [
+      "src/trees.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/trees_omega",
+    "kanon": [
+      "src/trees.kan"
+    ]
+  },
+  {
+    "source": "lib/temporal/verdict",
+    "kanon": [
+      "src/temporal_core.kan"
+    ]
+  }
+]

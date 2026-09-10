@@ -1,0 +1,62 @@
+def UniversalArrow : (0 A : Type 0) -> (0 H : Type 0) -> (0 K : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 K : Type 0) => prod (A, K, A -> K -> Result H)
+def UniversalAdjunction : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) =>
+  prod (Text, Functor A H B K, B -> Result (UniversalArrow A H K))
+def Adjunction : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) =>
+  prod (Text, Functor B K A H, Functor A H B K, B -> Result K, A -> Result H)
+def dualAdjunction : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Adjunction A H B K -> Adjunction B K A H :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) (adj : Adjunction A H B K) =>
+  tuple (adj.0, adj.2, adj.1, adj.4, adj.3)
+def leftAdjoint : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Category B K -> UniversalAdjunction A H B K -> Functor B K A H :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0)
+    (bcat : Category B K) (ua : UniversalAdjunction A H B K) =>
+  tuple (ua.0,
+    (fun (b : B) => resultMap (UniversalArrow A H K) A (fun (u : UniversalArrow A H K) => u.0) (ua.2 b)),
+    (fun (f : K) => bind (UniversalArrow A H K) H (ua.2 (bcat.1 f)) (fun (src : UniversalArrow A H K) =>
+      bind (UniversalArrow A H K) H (ua.2 (bcat.2 f)) (fun (tgt : UniversalArrow A H K) =>
+        bind K H (bcat.4 tgt.1 f) (fun (uf : K) => src.2 tgt.0 uf)))))
+def universalToAdjunction : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Category B K -> UniversalAdjunction A H B K -> Adjunction A H B K :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0)
+    (bcat : Category B K) (ua : UniversalAdjunction A H B K) =>
+  tuple (ua.0, leftAdjoint A H B K bcat ua, ua.1,
+    (fun (b : B) => resultMap (UniversalArrow A H K) K (fun (u : UniversalArrow A H K) => u.1) (ua.2 b)),
+    (fun (a : A) => bind B H (ua.1.1 a) (fun (ga : B) =>
+      bind (UniversalArrow A H K) H (ua.2 ga) (fun (u : UniversalArrow A H K) => u.2 a (bcat.3 ga)))))
+def initialAdjunction : (0 A : Type 0) -> (0 H : Type 0) -> Grounding A H -> UniversalAdjunction A H One One :=
+  fun (0 A : Type 0) (0 H : Type 0) (g : Grounding A H) =>
+  tuple (listNil Nat, terminalFunctor A H, (fun (u : One) =>
+    ok (UniversalArrow A H One) (tuple (g.1.0, one, (fun (a : A) (h : One) => g.1.1 a)))))
+def lanAdjoint : (0 J : Type 0) -> (0 H : Type 0) -> (0 C : Type 0) -> (0 K : Type 0) ->
+  FiniteCategory J H -> HomFinite C K -> Grounding J H -> Functor J H C K -> Kan J H C K J H :=
+  fun (0 J : Type 0) (0 H : Type 0) (0 C : Type 0) (0 K : Type 0)
+    (j : FiniteCategory J H) (c : HomFinite C K) (g : Grounding J H) (f : Functor J H C K) =>
+  lan J H C K J H j c g f (identityFunctor J H)
+def ranAdjoint : (0 J : Type 0) -> (0 H : Type 0) -> (0 C : Type 0) -> (0 K : Type 0) ->
+  FiniteCategory J H -> HomFinite C K -> Grounding J H -> Functor J H C K -> Kan J H C K J H :=
+  fun (0 J : Type 0) (0 H : Type 0) (0 C : Type 0) (0 K : Type 0)
+    (j : FiniteCategory J H) (c : HomFinite C K) (g : Grounding J H) (f : Functor J H C K) =>
+  ran J H C K J H j c g f (identityFunctor J H)
+def adjointCocontinuous : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Category A H -> Category B K -> Adjunction A H B K -> Colimiting B K -> Result (Colimiting A H) :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0)
+    (acat : Category A H) (bcat : Category B K) (adj : Adjunction A H B K) (col : Colimiting B K) =>
+  resultMap A (Colimiting A H) (fun (apex : A) => tuple (apex,
+    (fun (n : Nat) => bind K H (col.1 n) adj.1.2),
+    (fun (b : A) (legs : Nat -> Result H) =>
+      bind B H (adj.2.1 b) (fun (gb : B) =>
+      bind K H (col.2 gb (fun (n : Nat) =>
+        bind K K (col.1 n) (fun (xi : K) =>
+        bind H K (legs n) (fun (nun : H) =>
+        bind K K (adj.2.2 nun) (fun (gn : K) =>
+        bind K K (adj.3 (bcat.1 xi)) (fun (eta : K) => bcat.4 gn eta)))))) (fun (v : K) =>
+      bind H H (adj.1.2 v) (fun (fv : H) => bind H H (adj.4 b) (fun (eps : H) => acat.4 eps fv))))))) (adj.1.1 col.0)
+def adjointContinuous : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Category A H -> Category B K -> Adjunction A H B K -> Colimiting A H -> Result (Colimiting B K) :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0)
+    (acat : Category A H) (bcat : Category B K) (adj : Adjunction A H B K) (col : Colimiting A H) =>
+  adjointCocontinuous B K A H (opposite B K bcat) (opposite A H acat) (dualAdjunction A H B K adj) col

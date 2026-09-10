@@ -1,0 +1,28 @@
+def tEmptyClosure : Closure FinSet FinArrow Tag := mkClosureOf FinSet FinArrow Tag setEmpty
+def tTheory : SetTheory := tuple (tA, tEmptyClosure)
+def tBased : SetBased := basedOfTheory FinSet FinArrow Tag tTheory
+def testTheoryIdentity : Nat := boolNat ((theoryCategory FinSet FinArrow Tag fsInstitution).6
+  ((theoryCategory FinSet FinArrow Tag fsInstitution).3 tTheory) (tuple (tTheory, tIdentity, tTheory)))
+def testClosureSyntax : Nat := boolNat (boolNot (closureEqual FinSet FinArrow Tag setEqual setArrowEqual tagEqual
+  tEmptyClosure (mkCloseUnion FinSet FinArrow Tag tEmptyClosure tEmptyClosure)))
+def testTheoryCoproduct : Nat := boolNat (resultHolds (resultMap (Coproduct SetTheory SetTheoryArrow) Bool
+  (fun (p : Coproduct SetTheory SetTheoryArrow) => natEq (setCardinality p.0.0) 4) (fsTheoryGround.2 tTheory tTheory)))
+def testBasedCombine : Nat := boolNat (resultHolds (resultMap SetBased Bool
+  (fun (b : SetBased) => natEq (setCardinality b.0.0) 4) (theoryCombine tBased tBased)))
+def testSharedBase : Nat :=
+  let based : SetBased := tuple (tTheory, listCons SetTheory tTheory (listNil SetTheory),
+    listCons SetTheoryArrow (tuple (tTheory, tIdentity, tTheory)) (listNil SetTheoryArrow)) in
+  boolNat (resultHolds (resultMap SetBased Bool (fun (b : SetBased) =>
+    boolAnd (natEq (setCardinality b.0.0) 2) (natEq (listLength SetTheory b.1) 1)) (theoryCombine based based)))
+def testMissingBaseLeg : Nat :=
+  let malformed : SetBased := tuple (tTheory, listCons SetTheory tTheory (listNil SetTheory), listNil SetTheoryArrow) in
+  match (theoryCombine malformed tBased) as r in Result return Nat with
+  | failure e => 1 | success b => 0
+def testTheoryUnsupported : Nat := match (theoryMember FinSet FinArrow Tag tZero tEmptyClosure) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 16) | success b => 0
+def testTheoryLet : Nat := boolNat (resultHolds (resultMap SetBased Bool (fun (b : SetBased) => setEqual b.0.0 tA)
+  (theorySemantics (theoryLet textNode (theoryLiteral tBased) (theoryName textNode))
+    (listNil (prod (Text, SetBased))) (listNil (prod (Text, prod (SetTheoryArrow, List SetBased)))))))
+def testTheoryUnbound : Nat := match (theorySemantics (theoryName textNode)
+  (listNil (prod (Text, SetBased))) (listNil (prod (Text, prod (SetTheoryArrow, List SetBased))))) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 14) | success b => 0

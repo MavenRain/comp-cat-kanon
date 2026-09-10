@@ -1,0 +1,67 @@
+def tZero : Tag := tagJust (intNat 0)
+def tOne : Tag := tagJust (intNat 1)
+def tTwo : Tag := tagJust (intNat 2)
+def tA : FinSet := listCons Tag tZero (setSingleton tOne)
+def tB : FinSet := listCons Tag tOne (setSingleton tTwo)
+def testSetOverlap : Nat := boolNat (natEq (setCardinality (setUnion tA tB)) 3)
+def testSetOrder : Nat := boolNat (setEqual tA (listReverse Tag tA))
+def testTagDisjoint : Nat := boolNat (boolNot (tagEqual (tagPink tZero) (tagBlue tZero)))
+def testNegativeTag : Nat := boolNat (boolNot (tagEqual (tagJust (intNegative 0)) tOne))
+def testHomEnumeration : Nat := boolNat (natEq (listLength FinArrow (setHom tA tB)) 4)
+def testEmptyDomainHom : Nat := boolNat (natEq (listLength FinArrow (setHom setEmpty tB)) 1)
+def testEmptyTargetHom : Nat := boolNat (natEq (listLength FinArrow (setHom tA setEmpty)) 0)
+def testGroundCoproduct : Nat := boolNat (resultHolds (resultMap (Coproduct FinSet FinArrow) Bool
+  (fun (cp : Coproduct FinSet FinArrow) => natEq (setCardinality cp.0) 4) (setCoproduct tA tB)))
+def testDerivedCoproduct : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (cp : Colimiting FinSet FinArrow) => natEq (setCardinality cp.0) 4) (derivedCoproduct FinSet FinArrow finSetGround tA tB)))
+def testDerivedProduct : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 4) (derivedProduct FinSet FinArrow finSetDualGround tA tB)))
+def testDerivedInitial : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 0) (derivedInitial FinSet FinArrow finSetGround)))
+def tConstZero : FinArrow := setMake tA tA (fun (x : Tag) => tZero)
+def tIdentity : FinArrow := setIdentity tA
+def testCoequalizer : Nat := boolNat (resultHolds (resultMap (Coequalizer FinSet FinArrow) Bool
+  (fun (p : Coequalizer FinSet FinArrow) => natEq (setCardinality p.0) 1) (setCoequalizer tIdentity tConstZero)))
+def testDerivedCoequalizer : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 1)
+  (derivedCoequalizer FinSet FinArrow finSetGround tIdentity tConstZero)))
+def testDerivedEqualizer : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 1)
+  (derivedEqualizer FinSet FinArrow finSetDualGround tIdentity tConstZero)))
+def testCoproductMediator : Nat := boolNat (resultHolds
+  (bind (Colimiting FinSet FinArrow) Bool (derivedCoproduct FinSet FinArrow finSetGround tA tA)
+    (fun (cp : Colimiting FinSet FinArrow) =>
+      bind FinArrow Bool (cp.2 tA (fun (n : Nat) => ok FinArrow tIdentity)) (fun (h : FinArrow) =>
+      bind FinArrow Bool (cp.1 0) (fun (i : FinArrow) =>
+        resultMap FinArrow Bool (setArrowEqual tIdentity) (setCompose h i))))))
+def testProductMediator : Nat := boolNat (resultHolds
+  (bind (Colimiting FinSet FinArrow) Bool (derivedProduct FinSet FinArrow finSetDualGround tA tA)
+    (fun (cp : Colimiting FinSet FinArrow) =>
+      bind FinArrow Bool (cp.2 tA (fun (n : Nat) => ok FinArrow tIdentity)) (fun (h : FinArrow) =>
+      bind FinArrow Bool (cp.1 1) (fun (p : FinArrow) =>
+        resultMap FinArrow Bool (setArrowEqual tIdentity) (setCompose p h))))))
+
+def tDiagram : Functor Nat FinHom FinSet FinArrow := shapeTabulate FinSet FinArrow setIdentity
+  (listCons (prod (Nat, FinSet)) (tuple (0, tA)) (listCons (prod (Nat, FinSet)) (tuple (1, tA)) (listNil (prod (Nat, FinSet)))))
+  (listNil (prod (Nat, FinArrow)))
+def tRan : Kan Nat FinHom One One FinSet FinArrow :=
+  ran Nat FinHom One One FinSet FinArrow twoCategory terminalCategory.0 finSetDualGround (terminalFunctor Nat FinHom) tDiagram
+def tTestFunctor : Functor One One FinSet FinArrow := tuple (listNil Nat,
+  (fun (u : One) => ok FinSet tA), (fun (u : One) => ok FinArrow tIdentity))
+def tAlpha : Nat -> Result FinArrow := fun (n : Nat) => ok FinArrow tIdentity
+def testUniquenessAccepts : Nat := boolNat (resultHolds (tRan.7 tTestFunctor tAlpha (tRan.5 tTestFunctor tAlpha) one))
+def testUniquenessRejects : Nat := boolNat (resultHolds (resultMap Bool Bool boolNot
+  (tRan.7 tTestFunctor tAlpha (tRan.5 tTestFunctor (fun (n : Nat) => ok FinArrow tConstZero)) one)))
+def testFactorization : Nat := boolNat (resultHolds (tRan.6 tTestFunctor tAlpha 0))
+def testReconcile : Nat := boolNat (resultHolds (resultMap (prod (FinArrow, FinArrow)) Bool
+  (fun (p : prod (FinArrow, FinArrow)) => true) (reconcileCoproduct FinSet FinArrow finSetGround tA tB)))
+def testPullback : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 2)
+  (derivedPullback FinSet FinArrow finSetDualGround tIdentity tIdentity)))
+def testPushout : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (p : Colimiting FinSet FinArrow) => natEq (setCardinality p.0) 2)
+  (derivedPushout FinSet FinArrow finSetGround tIdentity tIdentity)))
+def testImageFactorization : Nat := boolNat (resultHolds
+  (bind (prod (FinArrow, FinArrow)) Bool (factorize FinSet FinArrow finSetGround finSetDualGround tConstZero)
+    (fun (p : prod (FinArrow, FinArrow)) => resultMap FinArrow Bool
+      (fun (h : FinArrow) => boolAnd (setArrowEqual h tConstZero) (natEq (setCardinality p.0.2) 1)) (setCompose p.1 p.0))))

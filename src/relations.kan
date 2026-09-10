@@ -1,0 +1,33 @@
+def TernaryCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H, H, H, O -> H -> H -> H -> Result H)
+def ternaryCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> O -> Result (TernaryCoproduct O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (a : O) (b : O) (c : O) =>
+  bind (Coproduct O H) (TernaryCoproduct O H) (g.2 a b) (fun (ab : Coproduct O H) =>
+  bind (Coproduct O H) (TernaryCoproduct O H) (g.2 ab.0 c) (fun (abc : Coproduct O H) =>
+  bind H (TernaryCoproduct O H) (g.0.4 abc.1 ab.1) (fun (fa : H) =>
+  resultMap H (TernaryCoproduct O H) (fun (fb : H) => tuple (abc.0, fa, fb, abc.2,
+    (fun (target : O) (u : H) (v : H) (w : H) => bind H H (ab.3 target u v) (fun (uv : H) => abc.3 target uv w))))
+    (g.0.4 abc.1 ab.2))))
+def PushoutSquare : (0 H : Type 0) -> Type 0 := fun (0 H : Type 0) => prod (H, H, H, H, H -> H -> Result H)
+def composeSquares : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> PushoutSquare H -> PushoutSquare H -> Result (PushoutSquare H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (a : PushoutSquare H) (b : PushoutSquare H) =>
+  bind One (PushoutSquare H) (require (c.6 a.3 b.1) (illFormed textUniversal textNotParallel)) (fun (u : One) =>
+  bind H (PushoutSquare H) (c.4 b.0 a.0) (fun (hf : H) =>
+  resultMap H (PushoutSquare H) (fun (pp : H) => tuple (hf, a.1, pp, b.3,
+    (fun (r : H) (s : H) => bind H H (c.4 r b.0) (fun (rh : H) => bind H H (a.4 rh s) (b.4 r))))) (c.4 b.2 a.2)))
+def relationLeg : FinSet -> FinSet -> (prod (Tag, Tag) -> Tag) -> Result FinArrow :=
+  fun (relation : FinSet) (target : FinSet) (pick : prod (Tag, Tag) -> Tag) =>
+  setMakeM relation target (fun (e : Tag) =>
+    match (tagUnpair e) as pair in Result return Result Tag with
+    | failure e => err Tag (illFormed textUniversal textPair)
+    | success xy => let value : Tag := pick xy in
+      bind One Tag (require (setMember value target) (illFormed textUniversal textOutside)) (fun (u : One) => ok Tag value))
+def relationSpan : FinSet -> FinSet -> FinSet -> Result (prod (FinArrow, FinArrow)) :=
+  fun (a : FinSet) (r : FinSet) (b : FinSet) =>
+  resultBoth FinArrow FinArrow (relationLeg r a (fun (p : prod (Tag, Tag)) => p.0))
+    (relationLeg r b (fun (p : prod (Tag, Tag)) => p.1))
+def relationCompose : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> prod (H, H) -> prod (H, H) -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (a : prod (H, H)) (b : prod (H, H)) =>
+  bind (Colimiting O H) (prod (H, H)) (derivedPullback O H d a.1 b.0) (fun (pb : Colimiting O H) =>
+  bind H (prod (H, H)) (pb.1 1) (fun (p : H) =>
+  bind H (prod (H, H)) (pb.1 2) (fun (q : H) => resultBoth H H (d.0.4 p a.0) (d.0.4 q b.1))))

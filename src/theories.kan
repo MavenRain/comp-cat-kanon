@@ -1,0 +1,100 @@
+def Institution : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) =>
+  prod (Category O H, O -> Result (List S), H -> S -> Result S, S -> S -> Bool, S -> Text)
+def Theory : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) => prod (O, Closure O H S)
+def TheoryArrow : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) => prod (Theory O H S, H, Theory O H S)
+def Based : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) =>
+  prod (Theory O H S, List (Theory O H S), List (TheoryArrow O H S))
+def basedOfTheory : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Theory O H S -> Based O H S :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (t : Theory O H S) =>
+  tuple (t, listNil (Theory O H S), listNil (TheoryArrow O H S))
+def theoryEqual : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Theory O H S -> Theory O H S -> Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (a : Theory O H S) (b : Theory O H S) =>
+  boolAnd (i.0.5 a.0 b.0) (closureEqual O H S i.0.5 i.0.6 i.3 a.1 b.1)
+def theoryCategory : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S ->
+  Category (Theory O H S) (TheoryArrow O H S) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) =>
+  let T : Type 0 := Theory O H S in
+  let TH : Type 0 := TheoryArrow O H S in
+  let eq : T -> T -> Bool := theoryEqual O H S i in
+  tuple (i.0.0, (fun (h : TH) => h.0), (fun (h : TH) => h.2), (fun (t : T) => tuple (t, i.0.3 t.0, t)),
+    (fun (g : TH) (f : TH) => case (eq g.0 f.2) with
+      | 0 (u : Unit) => err TH (notComposable i.0.0 (i.0.7 g.0.0) (i.0.7 f.2.0))
+      | 1 (u : Unit) => resultMap H TH (fun (h : H) => tuple (f.0, h, g.2)) (i.0.4 g.1 f.1)), eq,
+    (fun (f : TH) (g : TH) => boolAnd (eq f.0 g.0) (boolAnd (i.0.6 f.1 g.1) (eq f.2 g.2))),
+    (fun (t : T) => i.0.7 t.0), (fun (h : TH) => i.0.8 h.1))
+def theoryMember : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> S -> Closure O H S -> Result Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (s : S) (c : Closure O H S) =>
+  err Bool (unsupported textUniversal textRuleObligation)
+def checkTheoryArrow : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> TheoryArrow O H S -> Result One :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (h : TheoryArrow O H S) =>
+  err One (unsupported textUniversal textRuleObligation)
+def theoryGround : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Grounding O H ->
+  Grounding (Theory O H S) (TheoryArrow O H S) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (g : Grounding O H) =>
+  let T : Type 0 := Theory O H S in
+  let TH : Type 0 := TheoryArrow O H S in
+  let initial : T := tuple (g.1.0, mkClosureOf O H S (listNil S)) in
+  tuple (theoryCategory O H S i,
+    tuple (initial, (fun (t : T) => resultMap H TH (fun (h : H) => tuple (initial, h, t)) (g.1.1 t.0))),
+    (fun (a : T) (b : T) => resultMap (Coproduct O H) (Coproduct T TH) (fun (cp : Coproduct O H) =>
+      let apex : T := tuple (cp.0, mkCloseUnion O H S
+        (mkCloseTranslate O H S cp.1 a.1) (mkCloseTranslate O H S cp.2 b.1)) in
+      tuple (apex, tuple (a, cp.1, apex), tuple (b, cp.2, apex),
+        (fun (t : T) (f : TH) (h : TH) => resultMap H TH (fun (map : H) => tuple (apex, map, t)) (cp.3 t.0 f.1 h.1)))) (g.2 a.0 b.0)),
+    (fun (f : TH) (h : TH) => resultMap (Coequalizer O H) (Coequalizer T TH) (fun (ce : Coequalizer O H) =>
+      let apex : T := tuple (ce.0, mkCloseTranslate O H S ce.1 f.2.1) in
+      tuple (apex, tuple (f.2, ce.1, apex),
+        (fun (t : T) (q : TH) => resultMap H TH (fun (map : H) => tuple (apex, map, t)) (ce.2 t.0 q.1)))) (g.3 f.1 h.1)))
+def basedCompose : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Based O H S -> TheoryArrow O H S -> Result (Based O H S) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (b : Based O H S) (h : TheoryArrow O H S) =>
+  resultMap (List (TheoryArrow O H S)) (Based O H S) (fun (legs : List (TheoryArrow O H S)) => tuple (h.2, b.1, legs))
+    (listMapM (TheoryArrow O H S) (TheoryArrow O H S) ((theoryCategory O H S i).4 h) b.2)
+def basedEnrich : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Based O H S -> TheoryArrow O H S -> Result (Based O H S) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (b : Based O H S) (h : TheoryArrow O H S) =>
+  basedCompose O H S i b (tuple (b.0, h.1, tuple (h.2.0, mkCloseUnion O H S h.2.1 (mkCloseTranslate O H S h.1 b.0.1))))
+def basedColimit : (0 O : Type 0) -> (0 H : Type 0) -> (0 S : Type 0) -> Institution O H S -> Grounding O H ->
+  List (Based O H S) -> Result (prod (Based O H S, Colimiting (Theory O H S) (TheoryArrow O H S))) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 S : Type 0) (i : Institution O H S) (g : Grounding O H) (delta : List (Based O H S)) =>
+  let T : Type 0 := Theory O H S in
+  let TH : Type 0 := TheoryArrow O H S in
+  let B : Type 0 := Based O H S in
+  let Answer : Type 0 := prod (B, Colimiting T TH) in
+  let betas : List T := listUnique T (theoryEqual O H S i) (listConcat T (listMap B (List T) (fun (b : B) => b.1) delta)) in
+  let betaIndex : List (prod (Nat, T)) := listIndexed T betas in
+  let nodes : List (prod (Nat, T)) := listIndexed T (listAppend T betas (listMap B T (fun (b : B) => b.0) delta)) in
+  let offset : Nat := listLength T betas in
+  bind (List (List (prod (Edge, TH)))) Answer
+    (listMapM (prod (Nat, B)) (List (prod (Edge, TH))) (fun (entry : prod (Nat, B)) =>
+      listMapM (prod (Nat, T)) (prod (Edge, TH)) (fun (component : prod (Nat, T)) =>
+        bind TH (prod (Edge, TH)) (listLookup TH component.0 (listIndexed TH entry.1.2)) (fun (leg : TH) =>
+          resultMap (prod (Nat, T)) (prod (Edge, TH))
+            (fun (ix : prod (Nat, T)) => tuple (tuple (0, ix.0, natAdd offset entry.0), leg))
+            (listFind (prod (Nat, T)) (fun (x : prod (Nat, T)) => theoryEqual O H S i x.1 component.1)
+              (illFormed textUniversal textOutside) betaIndex))) (listIndexed T entry.1.1)) (listIndexed B delta))
+    (fun (parts : List (List (prod (Edge, TH)))) =>
+      let indexed : List (prod (Nat, prod (Edge, TH))) := listIndexed (prod (Edge, TH)) (listConcat (prod (Edge, TH)) parts) in
+      let edges : List Edge := listMap (prod (Nat, prod (Edge, TH))) Edge
+        (fun (p : prod (Nat, prod (Edge, TH))) => tuple (p.0, p.1.0.1, p.1.0.2)) indexed in
+      let maps : List (prod (Nat, TH)) := listMap (prod (Nat, prod (Edge, TH))) (prod (Nat, TH))
+        (fun (p : prod (Nat, prod (Edge, TH))) => tuple (p.0, p.1.1)) indexed in
+      let shape : Shape := tuple (listMap (prod (Nat, T)) Nat (fun (n : prod (Nat, T)) => n.0) nodes, edges) in
+      bind (Colimiting T TH) Answer
+        (engineColimit T TH (theoryGround O H S i g) (tuple (shape,
+          (fun (n : Nat) => listLookup T n nodes), (fun (n : Nat) => listLookup TH n maps))))
+        (fun (col : Colimiting T TH) => resultMap (List TH) Answer
+          (fun (legs : List TH) => tuple (tuple (col.0, betas, legs), col))
+          (listMapM (prod (Nat, T)) TH (fun (p : prod (Nat, T)) => col.1 p.0) betaIndex)))
+def fsInstitution : Institution FinSet FinArrow Tag := tuple (finSetCategory, ok FinSet, setApply, tagEqual, tagText)
+def fsTheoryGround : Grounding (Theory FinSet FinArrow Tag) (TheoryArrow FinSet FinArrow Tag) :=
+  theoryGround FinSet FinArrow Tag fsInstitution finSetGround
+def theoryDerive : TheoryArrow FinSet FinArrow Tag -> Result (prod (TheoryArrow FinSet FinArrow Tag, TheoryArrow FinSet FinArrow Tag)) :=
+  fun (h : TheoryArrow FinSet FinArrow Tag) =>
+  resultMap (prod (FinArrow, FinArrow)) (prod (TheoryArrow FinSet FinArrow Tag, TheoryArrow FinSet FinArrow Tag))
+    (fun (fac : prod (FinArrow, FinArrow)) =>
+      let mid : Theory FinSet FinArrow Tag := tuple (fac.0.2, mkCloseTranslate FinSet FinArrow Tag fac.0 h.0.1) in
+      tuple (tuple (h.0, fac.0, mid), tuple (mid, fac.1, h.2)))
+    (factorize FinSet FinArrow finSetGround finSetDualGround h.1)

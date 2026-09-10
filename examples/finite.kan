@@ -1,0 +1,6 @@
+def exampleElement : Nat -> Tag := fun (n : Nat) => tagJust (intNat n)
+def exampleSet : FinSet := listCons Tag (exampleElement 0) (setSingleton (exampleElement 1))
+def exampleCardinality : Nat :=
+  match (derivedCoproduct FinSet FinArrow finSetGround exampleSet exampleSet) as r in Result return Nat with
+  | failure e => 0
+  | success colimit => setCardinality colimit.0

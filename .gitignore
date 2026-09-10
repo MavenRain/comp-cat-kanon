@@ -1,0 +1,5 @@
+/build/
+/.kanon-exec/
+/.kanon-wait/
+__pycache__/
+/.toolchain/

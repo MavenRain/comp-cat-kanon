@@ -1,0 +1,84 @@
+def finiteFromData : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> List O -> List H -> FiniteCategory O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (objects : List O) (proper : List H) =>
+  let arrows : List H := listUnique H c.6 (listAppend H (listMap O H c.3 objects) proper) in
+  tuple (tuple (c, (fun (a : O) (b : O) => listFilter H (fun (h : H) =>
+    boolAnd (c.5 (c.1 h) a) (c.5 (c.2 h) b)) arrows)), objects, arrows)
+def discreteCategory : (0 O : Type 0) -> Text -> (O -> O -> Bool) -> (O -> Text) -> List O -> FiniteCategory O O :=
+  fun (0 O : Type 0) (name : Text) (eq : O -> O -> Bool) (show : O -> Text) (objects : List O) =>
+  finiteFromData O O (tuple (name, (fun (o : O) => o), (fun (o : O) => o), (fun (o : O) => o),
+    (fun (g : O) (f : O) => case (eq g f) with
+      | 0 (u : Unit) => err O (notComposable name (show g) (show f)) | 1 (u : Unit) => ok O g),
+    eq, eq, show, show)) objects (listNil O)
+def Path : Type 0 := prod (Nat, Nat, List Nat)
+def pathEqual : Path -> Path -> Bool := fun (a : Path) (b : Path) =>
+  boolAnd (natEq a.0 b.0) (boolAnd (natEq a.1 b.1) (listEqual Nat natEq a.2 b.2))
+def pathIdentity : Nat -> Path := fun (n : Nat) => tuple (n, n, listNil Nat)
+def pathCategory : Category Nat Path := tuple (textArrow,
+  (fun (p : Path) => p.0), (fun (p : Path) => p.1), pathIdentity,
+  (fun (g : Path) (f : Path) => case (natEq g.0 f.1) with
+    | 0 (u : Unit) => err Path (notComposable textArrow (natText g.0) (natText f.1))
+    | 1 (u : Unit) => ok Path (tuple (f.0, g.1, listAppend Nat f.2 g.2))),
+  natEq, pathEqual, natText, (fun (p : Path) => textJoin textArrow (listMap Nat Text natText p.2)))
+def pathExtend : Shape -> Path -> List Path := fun (s : Shape) (p : Path) =>
+  listMap Edge Path (fun (e : Edge) => tuple (p.0, e.2, listAppend Nat p.2 (listCons Nat e.0 (listNil Nat))))
+    (listFilter Edge (fun (e : Edge) => natEq e.1 p.1) s.1)
+def pathFinite : Shape -> Result (FiniteCategory Nat Path) := fun (s : Shape) =>
+  let paths : prod (List Path, List Path) := listFold Nat (prod (List Path, List Path)) s.0
+    (tuple (listMap Nat Path pathIdentity s.0, listNil Path))
+    (fun (acc : prod (List Path, List Path)) (n : Nat) =>
+      let next : List Path := listConcat Path (listMap Path (List Path) (pathExtend s) acc.0) in
+      tuple (next, listAppend Path acc.1 next)) in
+  case (natEq (listLength Path paths.0) 0) with
+  | 0 (u : Unit) => err (FiniteCategory Nat Path) (unsupported textArrow textCyclic)
+  | 1 (u : Unit) => ok (FiniteCategory Nat Path) (finiteFromData Nat Path pathCategory s.0 paths.1)
+def productCategory : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  Category O H -> Category P Q -> Category (prod (O, P)) (prod (H, Q)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (c : Category O H) (d : Category P Q) =>
+  tuple (textAppend c.0 d.0,
+    (fun (h : prod (H, Q)) => tuple (c.1 h.0, d.1 h.1)), (fun (h : prod (H, Q)) => tuple (c.2 h.0, d.2 h.1)),
+    (fun (o : prod (O, P)) => tuple (c.3 o.0, d.3 o.1)),
+    (fun (g : prod (H, Q)) (f : prod (H, Q)) => bind H (prod (H, Q)) (c.4 g.0 f.0)
+      (fun (h : H) => resultMap Q (prod (H, Q)) (fun (q : Q) => tuple (h, q)) (d.4 g.1 f.1))),
+    (fun (a : prod (O, P)) (b : prod (O, P)) => boolAnd (c.5 a.0 b.0) (d.5 a.1 b.1)),
+    (fun (a : prod (H, Q)) (b : prod (H, Q)) => boolAnd (c.6 a.0 b.0) (d.6 a.1 b.1)),
+    (fun (a : prod (O, P)) => textAppend (c.7 a.0) (d.7 a.1)),
+    (fun (a : prod (H, Q)) => textAppend (c.8 a.0) (d.8 a.1)))
+def listCross : (0 A : Type 0) -> (0 B : Type 0) -> List A -> List B -> List (prod (A, B)) :=
+  fun (0 A : Type 0) (0 B : Type 0) (xs : List A) (ys : List B) =>
+  listConcat (prod (A, B)) (listMap A (List (prod (A, B)))
+    (fun (x : A) => listMap B (prod (A, B)) (fun (y : B) => tuple (x, y)) ys) xs)
+def productFinite : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  FiniteCategory O H -> FiniteCategory P Q -> FiniteCategory (prod (O, P)) (prod (H, Q)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (c : FiniteCategory O H) (d : FiniteCategory P Q) =>
+  finiteFromData (prod (O, P)) (prod (H, Q)) (productCategory O H P Q c.0.0 d.0.0)
+    (listCross O P c.1 d.1) (listCross H Q c.2 d.2)
+def resultEqual : (0 A : Type 0) -> (A -> A -> Bool) -> Result A -> Result A -> Bool :=
+  fun (0 A : Type 0) (eq : A -> A -> Bool) (a : Result A) (b : Result A) =>
+  resultHolds (bind A Bool a (fun (x : A) => resultMap A Bool (eq x) b))
+def functorEqual : (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  FiniteCategory A B -> Category O H -> Functor A B O H -> Functor A B O H -> Bool :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0) (a : FiniteCategory A B) (c : Category O H)
+    (f : Functor A B O H) (g : Functor A B O H) =>
+  boolAnd (listAll A (fun (x : A) => resultEqual O c.5 (f.1 x) (g.1 x)) a.1)
+    (listAll B (fun (h : B) => resultEqual H c.6 (f.2 h) (g.2 h)) a.2)
+def NatTransform : (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0) =>
+  prod (Functor A B O H, Natural A H, Functor A B O H)
+def naturalDot : (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  Category O H -> NatTransform A B O H -> NatTransform A B O H -> NatTransform A B O H :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0) (c : Category O H)
+    (g : NatTransform A B O H) (f : NatTransform A B O H) =>
+  tuple (f.0, tuple (textAppend g.1.0 f.1.0, (fun (a : A) => bind H H (g.1.1 a)
+    (fun (outer : H) => bind H H (f.1.1 a) (c.4 outer)))), g.2)
+def functorCategory : (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  FiniteCategory A B -> Category O H -> Category (Functor A B O H) (NatTransform A B O H) :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0) (a : FiniteCategory A B) (c : Category O H) =>
+  let eq : Functor A B O H -> Functor A B O H -> Bool := functorEqual A B O H a c in
+  tuple (c.0, (fun (n : NatTransform A B O H) => n.0), (fun (n : NatTransform A B O H) => n.2),
+    (fun (f : Functor A B O H) => tuple (f, tuple (f.0, (fun (x : A) => resultMap O H c.3 (f.1 x))), f)),
+    (fun (g : NatTransform A B O H) (f : NatTransform A B O H) => case (eq f.2 g.0) with
+      | 0 (u : Unit) => err (NatTransform A B O H) (notComposable c.0 g.0.0 f.2.0)
+      | 1 (u : Unit) => ok (NatTransform A B O H) (naturalDot A B O H c g f)), eq,
+    (fun (m : NatTransform A B O H) (n : NatTransform A B O H) => boolAnd (boolAnd (eq m.0 n.0) (eq m.2 n.2))
+      (listAll A (fun (x : A) => resultEqual H c.6 (m.1.1 x) (n.1.1 x)) a.1)),
+    (fun (f : Functor A B O H) => f.0), (fun (n : NatTransform A B O H) => n.1.0))

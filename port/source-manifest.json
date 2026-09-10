@@ -1,0 +1,425 @@
+{
+  "source_revision": "426b28a1cff7b3af27be8b941465b2f19a1e7677",
+  "files": [
+    {
+      "path": "lib/book/ch2_sets.ml",
+      "sha256": "8759a7ffafd60871aa3f81ffec8505d607f38e0c92e9def69741f7e250e39a1e",
+      "lines": 159
+    },
+    {
+      "path": "lib/book/ch3_categories.ml",
+      "sha256": "b310d78f55a3519dd203867034831285a5ca6e308c8698a702ec322418d17263",
+      "lines": 436
+    },
+    {
+      "path": "lib/book/ch4_limits.ml",
+      "sha256": "d503831ffcfcdbf8cbfd9951fe66b9cc4f43e35befce8181ceff68caf85d32b3",
+      "lines": 342
+    },
+    {
+      "path": "lib/book/ch5_constructing.ml",
+      "sha256": "9bbbfa0e8694ba37929e0defb8316421762cc99807689de6c8be8de24ff8bd29",
+      "lines": 282
+    },
+    {
+      "path": "lib/book/ch6_adjunctions.ml",
+      "sha256": "c161e32f3dba8d9c12119de6b7d9fd542d47129477526b71addadb495dc8901d",
+      "lines": 351
+    },
+    {
+      "path": "lib/book/ch7_toposes.ml",
+      "sha256": "e69d931a56aa4cc4c74232bf851992c4a3de042988db8218c718e8c4489da107",
+      "lines": 289
+    },
+    {
+      "path": "lib/book/ch8_unify.ml",
+      "sha256": "79ae151b3bbc27d2c9d7298004ce41e1f7d813890ddaaa69c3028e8582d552c3",
+      "lines": 493
+    },
+    {
+      "path": "lib/book/ch9_theories.ml",
+      "sha256": "7357e1c7d775689ce1216fb52dc3168135a2df4a78dc22bfe4e8acf4ce2da6fe",
+      "lines": 337
+    },
+    {
+      "path": "lib/book/index.mli",
+      "sha256": "5072c8c5636d83802c928c6c94873497956664b8546a8620800283d1ffadf199",
+      "lines": 155
+    },
+    {
+      "path": "lib/category.ml",
+      "sha256": "570f9dcc7c4271186df7c65ca0771f9343c2683a9e73c3b2d1ea4609fa6bcc82",
+      "lines": 132
+    },
+    {
+      "path": "lib/category.mli",
+      "sha256": "ab0629a0b2e92fa957e62ea7ae68a6d0dc9dcfd1201eabf8e166ee202bcd1446",
+      "lines": 183
+    },
+    {
+      "path": "lib/collapse/adjunction.ml",
+      "sha256": "8dd12342d2465f65ff24ed263b3d2f77141870ffa3a0afedfe6bedb6901e3db2",
+      "lines": 331
+    },
+    {
+      "path": "lib/collapse/coequalizer.ml",
+      "sha256": "1d84cac32e171710ad8078501ee06ed887e1cdc1fb88b39e1df8f82620c93247",
+      "lines": 79
+    },
+    {
+      "path": "lib/collapse/colimit.ml",
+      "sha256": "f0067cfe961f3fd7526436acdb44ff90b5f4111c01e785e88ea0964c1cd63edd",
+      "lines": 53
+    },
+    {
+      "path": "lib/collapse/coproduct.ml",
+      "sha256": "e1c5982241e6595077ce93b3b26e45c46c9bb31851d928c501524314768adcca",
+      "lines": 60
+    },
+    {
+      "path": "lib/collapse/elements.ml",
+      "sha256": "4f7a6487381fbbf73ad5722c6e44c930fcd84e41e612ea2078625adf70c43c05",
+      "lines": 288
+    },
+    {
+      "path": "lib/collapse/end_coend.ml",
+      "sha256": "d35c1a7823d8c43a1876ab1cd312124c3f87cbe6774f5a0b48bfbe751fd2d57c",
+      "lines": 311
+    },
+    {
+      "path": "lib/collapse/equalizer.ml",
+      "sha256": "c6a77f0bf5911489f7035e5c6ad58b02146a32c2b803f774bb3b1ba9c78af470",
+      "lines": 100
+    },
+    {
+      "path": "lib/collapse/exponential.ml",
+      "sha256": "bfde9dbf31e1000fd90f5de16b8f9da82cfcb2bddc6d7474e2d4f0c9b1be7434",
+      "lines": 209
+    },
+    {
+      "path": "lib/collapse/factorization.ml",
+      "sha256": "6d614aa49a3a0dd93ef78b1db29731c8d84f609601d7a4eddc212b5d7df15a8f",
+      "lines": 104
+    },
+    {
+      "path": "lib/collapse/free_algebra.ml",
+      "sha256": "c86ac35cf7551bbb93012e6fb30d8c2047a4c4d08c8ea06d6d66a0f953295581",
+      "lines": 128
+    },
+    {
+      "path": "lib/collapse/initial.ml",
+      "sha256": "942a4e8d7a210cf46e32f2d02e9f4d75190688e753116f0490abc4a1e06a8636",
+      "lines": 46
+    },
+    {
+      "path": "lib/collapse/limit.ml",
+      "sha256": "5ed10dafd1885a1bdd5af5a5229ce993949cfafecf61e54b6fe8cf9bf21a6687",
+      "lines": 21
+    },
+    {
+      "path": "lib/collapse/omega.ml",
+      "sha256": "f763b996e5924ad0e1a447ab6ebd08e8773a339dd4bdedacef3c7c9aa1830d8b",
+      "lines": 408
+    },
+    {
+      "path": "lib/collapse/product.ml",
+      "sha256": "f0137932f10a162c4ff942f08ee77f5f615bd6db9bbbf412407692d00d31ec0f",
+      "lines": 86
+    },
+    {
+      "path": "lib/collapse/pullback.ml",
+      "sha256": "f6e4acb52c573a55a8ffeacf08fe2ffb691cb99f60510ec545bd848e6f8c7fe5",
+      "lines": 95
+    },
+    {
+      "path": "lib/collapse/pushout.ml",
+      "sha256": "2495b7694a27deb4c6ffa6324ae8b8fc9f58e5eb1571929ce3f137fb7d634ea8",
+      "lines": 82
+    },
+    {
+      "path": "lib/collapse/shapes.ml",
+      "sha256": "223733d0dce6d876b4610564ed9e606387affc7c081d933bdd80f1d890fa8639",
+      "lines": 168
+    },
+    {
+      "path": "lib/collapse/subobject.ml",
+      "sha256": "c0dcbf5f1c079b15dd838bf905748d41c960f79ee1f069b5411dfda7ad8c7f0e",
+      "lines": 318
+    },
+    {
+      "path": "lib/collapse/terminal_obj.ml",
+      "sha256": "97d30c1040709c4b5cf566d98fb24d1b65d9450112925a18cad105c3f45867ae",
+      "lines": 56
+    },
+    {
+      "path": "lib/collapse/topos.ml",
+      "sha256": "e9f11bec31b16fc3e631b050e8f422a105d3504b0430a57176b1ffc4646dbfd4",
+      "lines": 146
+    },
+    {
+      "path": "lib/core/diagram.ml",
+      "sha256": "735226a12119ce3b32f5f37daf55f7e7ecd6d766e774805d1a99ba0de3fe3953",
+      "lines": 14
+    },
+    {
+      "path": "lib/core/diagram.mli",
+      "sha256": "6c6d1f2118c82ea747a2b4ddc28f0e0ea6568d75422c2e8a8047e114f72928d7",
+      "lines": 29
+    },
+    {
+      "path": "lib/core/err.ml",
+      "sha256": "07991dfde77d47eb589617f41b7987202a47660c0b7c60b289268315c042fa40",
+      "lines": 58
+    },
+    {
+      "path": "lib/core/err.mli",
+      "sha256": "9631f1f94364f4f7f058ee38d722b5ed7dbe6184faf6630d2ce7bf81722db3d1",
+      "lines": 62
+    },
+    {
+      "path": "lib/core/fnct.ml",
+      "sha256": "7a11658bd8ebe2237a09ae9c64df1493313c0fd22292714eaf8b517b81f04a40",
+      "lines": 25
+    },
+    {
+      "path": "lib/core/fnct.mli",
+      "sha256": "cd0d7ca4b352dbb8e917cfddacd12e04eb548c8352a481e6787aafdb988b9b35",
+      "lines": 44
+    },
+    {
+      "path": "lib/core/memo.ml",
+      "sha256": "8aefcc22abe6153900454d92f6cfbbe3754e4f9ab08e777ef911a6084fa9d9ff",
+      "lines": 15
+    },
+    {
+      "path": "lib/core/memo.mli",
+      "sha256": "1b2a53e6216f76dff77874c198e38799c5a2985985df0bfa66d5d355d0c3f065",
+      "lines": 24
+    },
+    {
+      "path": "lib/core/res.ml",
+      "sha256": "c97c61af0459216f4fc320639d91e1ff1ced1e2b2f6400d3218b6b64efc2dc7f",
+      "lines": 38
+    },
+    {
+      "path": "lib/core/res.mli",
+      "sha256": "7151b4d50a366ce39e2b5b43d0afa3890bb3b84dbc464566706c0c926406e118",
+      "lines": 65
+    },
+    {
+      "path": "lib/core/shape.ml",
+      "sha256": "043582e6fb4a329b76d73ced963a68b9966963dddc93c130cde006a38a7ca8de",
+      "lines": 12
+    },
+    {
+      "path": "lib/core/shape.mli",
+      "sha256": "120dc5f562cc4b25fe297adcb81acf6bc39528c04ad7072f89723741eab679f4",
+      "lines": 34
+    },
+    {
+      "path": "lib/engine.ml",
+      "sha256": "79a2a0410dff3f93f69a9d5a3eb2117b567a5b78668721ba174624ac3bcbba65",
+      "lines": 71
+    },
+    {
+      "path": "lib/engine.mli",
+      "sha256": "4e9a7435d1d1cffa413b3c7fda25ba7d165a3e29224313b637a5dc209450e618",
+      "lines": 39
+    },
+    {
+      "path": "lib/ground.ml",
+      "sha256": "d29eb578cd885154a6b921fc199bc09b381530c96cc76509d57a8bdcbd4ca830",
+      "lines": 39
+    },
+    {
+      "path": "lib/ground.mli",
+      "sha256": "6f49442d0f43562410397c9e884086574bf28ff3a2289062a34184a3fe878788",
+      "lines": 71
+    },
+    {
+      "path": "lib/instances/arrow_cat.ml",
+      "sha256": "65b590768c1bb4de06ac81a2a72fbdce435b9868afd3230d330bacdc104b469d",
+      "lines": 418
+    },
+    {
+      "path": "lib/instances/fingraph.ml",
+      "sha256": "cc724c0ce59493fd957607a0333205c5c13b4b5df825e5939b3b1ffe50c9df55",
+      "lines": 225
+    },
+    {
+      "path": "lib/instances/finkleisli.ml",
+      "sha256": "fcf28fed81ffcce8b80c4afde788080bc4e450aba898e4d1a5729e61b469b827",
+      "lines": 378
+    },
+    {
+      "path": "lib/instances/finset.ml",
+      "sha256": "314ce1ee71ad85115ff199bc4f875a4201e77b0f69fba6d657e33d82848aa32f",
+      "lines": 459
+    },
+    {
+      "path": "lib/instances/tag.ml",
+      "sha256": "7bf3855e92d131ee2c370aa4ca22e529f1358e292f175d4cb4d5f694b94be230",
+      "lines": 123
+    },
+    {
+      "path": "lib/instances/theories.ml",
+      "sha256": "9b82f7903f3d7d879510d4aa46baeb0cbc11b037c79c08248675d49f5b745866",
+      "lines": 633
+    },
+    {
+      "path": "lib/iso.ml",
+      "sha256": "e16bcdc68f3f5a5c3cad9c74a8727bd48e3087bf21b74f4d6c27f010b54a2fc2",
+      "lines": 129
+    },
+    {
+      "path": "lib/kan.ml",
+      "sha256": "1e21bdba0407a0be900bc65b11b742e31787d003ae24e39c006b5641f409eecd",
+      "lines": 242
+    },
+    {
+      "path": "lib/kan.mli",
+      "sha256": "8e136d8c0aa05d214eb22251ac0b88063bdb9a3254be8a2ee1e18e87747b8511",
+      "lines": 200
+    },
+    {
+      "path": "lib/laws.ml",
+      "sha256": "ea3fe3351aac3e38c1a65349c81c8b1bee798c13aa5a6ede04bc2a9639438bb8",
+      "lines": 192
+    },
+    {
+      "path": "lib/prod_cat.ml",
+      "sha256": "b689adcd15adb1debc95febe9f1f9a856bf35598d9df997d5eb57c4c7705c105",
+      "lines": 101
+    },
+    {
+      "path": "lib/runtime/cat_data.ml",
+      "sha256": "e3cc859d191409a0ecb0da313fd4dc48798145eb3f8f44a93f6f161dd3f681c6",
+      "lines": 62
+    },
+    {
+      "path": "lib/runtime/cat_data.mli",
+      "sha256": "ca6060c6c9694df9ef3ce5c509b6ee81e8aa67cf4cc4408bee39fb15d4073e64",
+      "lines": 61
+    },
+    {
+      "path": "lib/runtime/comma.ml",
+      "sha256": "ec4c6d0a923746ce1c6285cea1b91ab9b83677f78ddefa4e0381b76ecd6fc320",
+      "lines": 533
+    },
+    {
+      "path": "lib/runtime/discrete.ml",
+      "sha256": "a3294d3195d4b3ace2ec8d7793fde385189376536b9b62b449141611759cf759",
+      "lines": 58
+    },
+    {
+      "path": "lib/runtime/driver.ml",
+      "sha256": "50b64d097bdac1ef30bfa16f5bc5e767bd1ec62b9d28b1b3f4ac1e3d7adb7833",
+      "lines": 98
+    },
+    {
+      "path": "lib/runtime/fin.ml",
+      "sha256": "562d93dcb226ffcfa14b8039ecf1cb603499f51aa2efc06b3d75a89b756f9f5d",
+      "lines": 146
+    },
+    {
+      "path": "lib/runtime/functor_cat.ml",
+      "sha256": "068e374c9ed0070c63fe4cc0244925718f64914f54033e54b0c0f7368bf96926",
+      "lines": 361
+    },
+    {
+      "path": "lib/runtime/path.ml",
+      "sha256": "649a4e5919df9bcac204935cc46921699bff1449e1ab77052cb5e64ad00c2205",
+      "lines": 129
+    },
+    {
+      "path": "lib/temporal/behaviour.ml",
+      "sha256": "83611fa38f388adc7e0cfe3d096528851127087e5706b9ddb50316e77806d336",
+      "lines": 32
+    },
+    {
+      "path": "lib/temporal/behaviour.mli",
+      "sha256": "1f9cf930b9ec56700ebd36d2348825ce4a9cfb07e96dac698556fb32014ac47b",
+      "lines": 28
+    },
+    {
+      "path": "lib/temporal/later.ml",
+      "sha256": "479239ab68c485d9bf46dbb20faa000b5ac6195a365c847408503a7ff581993c",
+      "lines": 29
+    },
+    {
+      "path": "lib/temporal/later.mli",
+      "sha256": "d199117d748336fe65b047187a4de964844c5896e996e05042c4e6c2445dd1d4",
+      "lines": 20
+    },
+    {
+      "path": "lib/temporal/omega_val.ml",
+      "sha256": "92b4b94193ca81011dfb8b8d5d950dc28daa6fe2294e6e5460e133bcfe54ebbb",
+      "lines": 37
+    },
+    {
+      "path": "lib/temporal/omega_val.mli",
+      "sha256": "fa4d72dbeb063b69d61771c4cc692521094b68cd396c633125df1f3def846894",
+      "lines": 41
+    },
+    {
+      "path": "lib/temporal/rule.ml",
+      "sha256": "7d478f85be28dfb8fd80cfdee4f88604e47be5e9d352a8d7f156f46268193851",
+      "lines": 186
+    },
+    {
+      "path": "lib/temporal/rule.mli",
+      "sha256": "36a505e93d10ab05c7f035462f878cc310ae626a82343b8c33a660189c283e16",
+      "lines": 110
+    },
+    {
+      "path": "lib/temporal/temporal.ml",
+      "sha256": "384daefc4590f44da447d8b702a149909c5ffff03d2decb84deb07f3afe588d2",
+      "lines": 140
+    },
+    {
+      "path": "lib/temporal/temporal.mli",
+      "sha256": "4c7b703f91d9096a98fc87a1285e2c7d44768ba1e5bd11001484eb4d4b339586",
+      "lines": 99
+    },
+    {
+      "path": "lib/temporal/temporal_eval.ml",
+      "sha256": "321548ffd0bfd795a8b412c9e6e65ae7d183f950d4c8f6568f7561622d290da0",
+      "lines": 115
+    },
+    {
+      "path": "lib/temporal/temporal_eval.mli",
+      "sha256": "6afd226f3e6fdbb015eba931e8e431f5fbcd1e5cb9155347e0d38a2aa291fbb4",
+      "lines": 12
+    },
+    {
+      "path": "lib/temporal/trees.ml",
+      "sha256": "33eb62b1d8678d31e171c23e2b34053868105876103ce7618c0f4a04709e9796",
+      "lines": 21
+    },
+    {
+      "path": "lib/temporal/trees.mli",
+      "sha256": "21868e81dbb436f3d2bf808d192e5bd95be841a54845e6883b54cae3157ef12a",
+      "lines": 26
+    },
+    {
+      "path": "lib/temporal/trees_omega.ml",
+      "sha256": "7b01ea533b83770af0319c8ed1ec00ccf75a5627a52332c0f2f0643840428cfb",
+      "lines": 54
+    },
+    {
+      "path": "lib/temporal/trees_omega.mli",
+      "sha256": "d823061213dd5e1e085c116c2ad50d73754c6ea9e0a5c20c3e4557b7bc443fe7",
+      "lines": 34
+    },
+    {
+      "path": "lib/temporal/verdict.ml",
+      "sha256": "3c9ab5ddc8fda4cac14db3a19883db40379512b303763ffbd4145691d44cef8f",
+      "lines": 26
+    },
+    {
+      "path": "lib/temporal/verdict.mli",
+      "sha256": "f1348b9ef499de133acd7a2a731e1dc3360a2c18c792ec7a878194bbf6c6ca9f",
+      "lines": 33
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+def testArrowSquare : Nat := boolNat (resultHolds (arrowCommutes (arrowCategory.3 (arrowObject tConstZero))))
+def testResultFunction : Nat := boolNat (resultHolds (bind (Nat -> Nat) Bool
+  (ok (Nat -> Nat) (fun (n : Nat) => natAdd n 1)) (fun (f : Nat -> Nat) => ok Bool (natEq (f 2) 3))))
+def testPreservedCoproduct : Nat := boolNat (resultHolds (bind (prod (One, FinSet -> FinArrow -> FinArrow -> Result FinArrow)) Bool
+  (arrowInput.6 tA tA) (fun (copair : prod (One, FinSet -> FinArrow -> FinArrow -> Result FinArrow)) =>
+    resultMap FinArrow Bool (fun (f : FinArrow) => natEq (setCardinality f.0) 4) (copair.1 tA tIdentity tIdentity))))
+def testArrowRejects : Nat :=
+  match (arrowMorphism (arrowObject tIdentity) tConstZero tIdentity (arrowObject tIdentity)) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 5) | success h => 0
+def testArrowCoproduct : Nat := boolNat (resultHolds
+  (bind (Coproduct ArrowObject ArrowMorphism) Bool (arrowGround.2 (arrowObject tIdentity) (arrowObject tConstZero))
+    (fun (p : Coproduct ArrowObject ArrowMorphism) => bind Bool Bool (arrowCommutes p.1)
+      (fun (left : Bool) => resultMap Bool Bool (boolAnd left) (arrowCommutes p.2)))))
+def testArrowProduct : Nat := boolNat (resultHolds
+  (bind (Coproduct ArrowObject ArrowMorphism) Bool (arrowProduct (arrowObject tIdentity) (arrowObject tConstZero))
+    (fun (p : Coproduct ArrowObject ArrowMorphism) => bind Bool Bool (arrowCommutes p.1)
+      (fun (left : Bool) => resultMap Bool Bool (boolAnd left) (arrowCommutes p.2)))))
+def testGraphConstruction : Nat := boolNat (resultHolds
+  (bind ArrowObject Bool (graphObject tA tA (fun (t : Tag) => tZero) (fun (t : Tag) => tOne))
+    (fun (graph : ArrowObject) => graphCommutes (graphGround.0.3 graph))))
+def testFunctionSpace : Nat := boolNat (natEq (setCardinality (functionSpace tA tA)) 4)
+def testSetEvaluation : Nat := boolNat (resultHolds
+  (bind (Exponential FinSet FinArrow) Bool (setExponential tA tA) (fun (e : Exponential FinSet FinArrow) =>
+    resultMap Tag Bool (tagEqual tOne) (setApply e.1 (tagPair (tagTuple (tagGraphFromList tIdentity.1)) tOne)))))
+def testSetCurry : Nat := boolNat (resultHolds
+  (bind (Exponential FinSet FinArrow) Bool (setExponential tA tA) (fun (e : Exponential FinSet FinArrow) =>
+  bind (Coproduct FinSet FinArrow) Bool (setProduct tA tA) (fun (p : Coproduct FinSet FinArrow) =>
+  bind FinArrow Bool (e.2 tA p.1) (fun (curried : FinArrow) =>
+    resultMap Tag Bool (tagEqual (tagTuple (tagGraphFromList tIdentity.1))) (setApply curried tZero))))))
+def tMono : FinArrow := setMake (setSingleton tZero) tA (fun (t : Tag) => t)
+def testClassifierSquare : Nat := boolNat (resultHolds
+  (bind (PullbackSquare FinArrow) Bool (boolClassifier.2 tMono) (squareCommutes FinSet FinArrow finSetCategory)))
+def testClassifierFalse : Nat := boolNat (resultHolds (resultMap Tag Bool (tagEqual tagFalse) (setApply (boolChi tMono) tOne)))
+-- Retain the original classifier's partial universal implementation.
+def testClassifierSourceLimitation : Nat :=
+  match (bind (PullbackSquare FinArrow) FinArrow (boolClassifier.2 tMono)
+    (fun (s : PullbackSquare FinArrow) => s.4 s.2 tMono)) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 4) | success h => 0
+def testLogicNot : Nat := boolNat (resultHolds
+  (bind FinArrow Bool (logicNot FinSet FinArrow finSetGround finSetDualGround boolClassifier)
+    (fun (neg : FinArrow) => bind Tag Bool (setApply neg tagTrue) (fun (a : Tag) =>
+      resultMap Tag Bool (fun (b : Tag) => boolAnd (tagEqual a tagFalse) (tagEqual b tagTrue)) (setApply neg tagFalse)))))
+def testDiscrete : Nat := boolNat (natEq (listLength Nat (discreteCategory Nat textNode natEq natText shapeDiscreteTwo.0).2) 2)
+def testPathComposite : Nat := boolNat (resultHolds (resultMap (FiniteCategory Nat Path) Bool
+  (fun (c : FiniteCategory Nat Path) => natEq (listLength Path c.2) 6)
+  (pathFinite (tuple (listCons Nat 0 (listCons Nat 1 (listCons Nat 2 (listNil Nat))),
+    listCons Edge (tuple (0, 0, 1)) (listCons Edge (tuple (1, 1, 2)) (listNil Edge)))))))
+def testPathCycle : Nat := match (pathFinite (tuple (listCons Nat 0 (listNil Nat),
+  listCons Edge (tuple (0, 0, 0)) (listNil Edge)))) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 16) | success c => 0
+def tPresheaf : Presheaf One One Nat := tuple (textNode,
+  (fun (u : One) => ok (List Nat) shapeDiscreteTwo.0), (fun (h : One) (n : Nat) => ok Nat n), natEq, natText)
+def testElementsFinite : Nat := boolNat (resultHolds (resultMap (FiniteCategory (prod (One, Nat)) (ElementHom One One Nat)) Bool
+  (fun (c : FiniteCategory (prod (One, Nat)) (ElementHom One One Nat)) =>
+    boolAnd (natEq (listLength (prod (One, Nat)) c.1) 2) (natEq (listLength (ElementHom One One Nat) c.2) 2))
+  (elementFinite One One Nat terminalCategory tPresheaf)))
+def testElementsRejects : Nat := match (elementMorphism One One Nat unitCategory tPresheaf
+  (tuple (one, 0)) one (tuple (one, 1))) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 15) | success h => 0
+def testTwistedTerminal : Nat := boolNat (natEq (listLength (TwHom One) (twistedFinite One One terminalCategory).2) 1)
+def tBifunctor : Functor (prod (One, One)) (prod (One, One)) FinSet FinArrow :=
+  tuple (textNode, (fun (o : prod (One, One)) => ok FinSet tA), (fun (h : prod (One, One)) => ok FinArrow tIdentity))
+def testCoendTerminal : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (c : Colimiting FinSet FinArrow) => natEq (setCardinality c.0) 2)
+  (coend One One FinSet FinArrow terminalCategory finSetGround tBifunctor)))
+def testEndTerminal : Nat := boolNat (resultHolds (resultMap (Colimiting FinSet FinArrow) Bool
+  (fun (c : Colimiting FinSet FinArrow) => natEq (setCardinality c.0) 2)
+  (categoricalEnd One One FinSet FinArrow terminalCategory finSetDualGround tBifunctor)))
+def testArrowClassifier : Nat := boolNat (resultHolds
+  (bind (PullbackSquare ArrowMorphism) Bool (arrowClassifier.2 (arrowCategory.3 (arrowObject tIdentity)))
+    (squareCommutes ArrowObject ArrowMorphism arrowCategory)))
+def testInitialAdjunction : Nat := boolNat (resultHolds (resultMap FinSet Bool setIsEmpty
+  ((universalToAdjunction FinSet FinArrow One One unitCategory (initialAdjunction FinSet FinArrow finSetGround)).1.1 one)))
+def testGraphComponents : Nat := boolNat (resultHolds (bind ArrowObject Bool
+  (graphObject tA (setSingleton tZero) (fun (x : Tag) => tZero) (fun (x : Tag) => tOne))
+  (fun (g : ArrowObject) => resultMap (UniversalArrow FinSet FinArrow ArrowMorphism) Bool
+    (fun (u : UniversalArrow FinSet FinArrow ArrowMorphism) => natEq (setCardinality u.0) 1) (componentsUniversal g))))
+def testFunctorIdentity : Nat := boolNat ((functorCategory Nat FinHom FinSet FinArrow twoCategory finSetCategory).6
+  ((functorCategory Nat FinHom FinSet FinArrow twoCategory finSetCategory).3 tDiagram)
+  ((functorCategory Nat FinHom FinSet FinArrow twoCategory finSetCategory).3 tDiagram))
+def testReconcileInitial : Nat := match (checkInitial FinSet FinArrow finSetGround) as r in Result return Nat with
+  | failure e => 0 | success u => 1
+def testReconcileCoequalizer : Nat := boolNat (resultHolds (resultMap (Comparison FinArrow) Bool
+  (fun (c : Comparison FinArrow) => boolAnd c.2 c.3) (compareCoequalizer FinSet FinArrow finSetGround tIdentity tConstZero)))

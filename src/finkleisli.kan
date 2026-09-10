@@ -1,0 +1,96 @@
+-- Operators have named argument places, with extensional arity-set equality.
+def Operator : Type 0 := prod (Text, FinSet)
+def operatorEqual : Operator -> Operator -> Bool := fun (a : Operator) (b : Operator) =>
+  boolAnd (listEqual Nat natEq a.0 b.0) (setEqual a.1 b.1)
+mutual
+mu Term : Type 0 :=
+| termVar (variable : Tag) : Term
+| termApply (operator : Operator) (arguments : TermArgs) : Term
+mu TermArgs : Type 0 :=
+| termArgsNil : TermArgs
+| termArgsCons (place : Tag) (value : Term) (rest : TermArgs) : TermArgs
+end
+def variable : Tag -> Term := fun (x : Tag) => termVar x
+def rec termArgsLookup : TermArgs -> Tag -> Result Term := fun (args : TermArgs) (key : Tag) =>
+  match args as self in TermArgs return Result Term with
+  | termArgsNil => err Term (notInDomain textNode (tagText key))
+  | termArgsCons place value rest =>
+    case (tagEqual place key) with | 0 (u : Unit) => termArgsLookup rest key | 1 (u : Unit) => ok Term value
+def application : Operator -> (Tag -> Term) -> Term := fun (op : Operator) (args : Tag -> Term) =>
+  termApply op (listFold Tag TermArgs (listReverse Tag op.1) termArgsNil
+    (fun (rest : TermArgs) (place : Tag) => termArgsCons place (args place) rest))
+def rec termEqual : Term -> Term -> Bool := fun (a : Term) (b : Term) =>
+  match a as self in Term return Bool with
+  | termVar x => (match b as other in Term return Bool with | termVar y => tagEqual x y | termApply op args => false)
+  | termApply op args => (match b as other in Term return Bool with
+    | termVar x => false
+    | termApply op2 args2 => boolAnd (operatorEqual op op2) (termArgsEqual args args2))
+and termArgsEqual : TermArgs -> TermArgs -> Bool := fun (a : TermArgs) (b : TermArgs) =>
+  match a as self in TermArgs return Bool with
+  | termArgsNil => true
+  | termArgsCons place value rest =>
+    boolAnd (resultHolds (resultMap Term Bool (termEqual value) (termArgsLookup b place))) (termArgsEqual rest b)
+def rec termSubstitute : Term -> (Tag -> Term) -> Term := fun (term : Term) (sub : Tag -> Term) =>
+  match term as self in Term return Term with
+  | termVar x => sub x
+  | termApply op args => termApply op (termArgsSubstitute args sub)
+and termArgsSubstitute : TermArgs -> (Tag -> Term) -> TermArgs := fun (args : TermArgs) (sub : Tag -> Term) =>
+  match args as self in TermArgs return TermArgs with
+  | termArgsNil => termArgsNil
+  | termArgsCons place value rest => termArgsCons place (termSubstitute value sub) (termArgsSubstitute rest sub)
+def rec termOccurs : Term -> Tag -> Bool := fun (term : Term) (x : Tag) =>
+  match term as self in Term return Bool with
+  | termVar y => tagEqual x y
+  | termApply op args => termArgsOccurs args x
+and termArgsOccurs : TermArgs -> Tag -> Bool := fun (args : TermArgs) (x : Tag) =>
+  match args as self in TermArgs return Bool with
+  | termArgsNil => false
+  | termArgsCons place value rest => boolOr (termOccurs value x) (termArgsOccurs rest x)
+def rec termVariables : Term -> FinSet := fun (term : Term) =>
+  match term as self in Term return FinSet with
+  | termVar x => setSingleton x
+  | termApply op args => termArgsVariables args
+and termArgsVariables : TermArgs -> FinSet := fun (args : TermArgs) =>
+  match args as self in TermArgs return FinSet with
+  | termArgsNil => setEmpty
+  | termArgsCons place value rest => setUnion (termVariables value) (termArgsVariables rest)
+def rec termText : Term -> Text := fun (term : Term) =>
+  match term as self in Term return Text with
+  | termVar x => textAppend textVar (textAppend (tagText x) textCloseParen)
+  | termApply op args => textAppend op.0 (textAppend textOpenParen (textAppend (termArgsText args) textCloseParen))
+and termArgsText : TermArgs -> Text := fun (args : TermArgs) =>
+  match args as self in TermArgs return Text with
+  | termArgsNil => listNil Nat
+  | termArgsCons place value rest => textAppend (termText value)
+    (match rest as tail in TermArgs return Text with
+      | termArgsNil => listNil Nat | termArgsCons p v t => textAppend textComma (termArgsText rest))
+
+def Substitution : Type 0 := prod (FinSet, Tag -> Term, FinSet)
+def substIdentity : FinSet -> Substitution := fun (s : FinSet) => tuple (s, variable, s)
+def substApply : Term -> Substitution -> Term := fun (t : Term) (s : Substitution) => termSubstitute t s.1
+def substCompose : Substitution -> Substitution -> Result Substitution := fun (outer : Substitution) (inner : Substitution) =>
+  case (setEqual outer.0 inner.2) with
+  | 0 (u : Unit) => err Substitution (notComposable textFinKleisli (setText outer.0) (setText inner.2))
+  | 1 (u : Unit) => ok Substitution (tuple (inner.0, (fun (x : Tag) => substApply (inner.1 x) outer), outer.2))
+def substEqual : Substitution -> Substitution -> Bool := fun (a : Substitution) (b : Substitution) =>
+  boolAnd (boolAnd (setEqual a.0 b.0) (setEqual a.2 b.2))
+    (listAll Tag (fun (x : Tag) => termEqual (a.1 x) (b.1 x)) a.0)
+def substText : Substitution -> Text := fun (s : Substitution) =>
+  textAppend (setText s.0) (textAppend textSubArrow (textAppend (setText s.2)
+    (textAppend textOpenGraph (textAppend (textJoin textSemi (listMap Tag Text
+      (fun (x : Tag) => textAppend (tagText x) (textAppend textMapsTo (termText (s.1 x)))) s.0)) textCloseGraph))))
+def finKleisliCategory : Category FinSet Substitution := tuple (textFinKleisli,
+  (fun (s : Substitution) => s.0), (fun (s : Substitution) => s.2), substIdentity, substCompose,
+  setEqual, substEqual, setText, substText)
+def fkInitial : Initial FinSet Substitution := tuple (setEmpty,
+  (fun (s : FinSet) => ok Substitution (tuple (setEmpty, variable, s))))
+def fkCoproduct : FinSet -> FinSet -> Result (Coproduct FinSet Substitution) := fun (a : FinSet) (b : FinSet) =>
+  let total : FinSet := setUnion (listMap Tag Tag (fun (x : Tag) => tagPink x) a) (listMap Tag Tag (fun (x : Tag) => tagBlue x) b) in
+  ok (Coproduct FinSet Substitution) (tuple (total,
+    tuple (a, (fun (x : Tag) => termVar (tagPink x)), total), tuple (b, (fun (x : Tag) => termVar (tagBlue x)), total),
+    (fun (c : FinSet) (f : Substitution) (g : Substitution) => ok Substitution (tuple (total,
+      (fun (x : Tag) =>
+        let split : Result (prod (Bool, Tag)) := tagSplit x in
+        match split as self in Result return Term with
+        | failure e => termVar x
+        | success p => (case p.0 with | 0 (u : Unit) => f.1 p.1 | 1 (u : Unit) => g.1 p.1)), c)))))

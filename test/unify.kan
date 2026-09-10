@@ -1,0 +1,37 @@
+def tOp : Operator := tuple (listCons Nat 102 (listNil Nat), setSingleton tZero)
+def tOpOther : Operator := tuple (listCons Nat 103 (listNil Nat), setSingleton tZero)
+def tTermF : Term := application tOp (fun (x : Tag) => termVar tOne)
+def tTermG : Term := application tOpOther (fun (x : Tag) => termVar tOne)
+def tSubLeft : Substitution := tuple (setSingleton tZero, (fun (x : Tag) => termVar tZero), tA)
+def tSubRight : Substitution := tuple (setSingleton tZero, (fun (x : Tag) => tTermF), tA)
+def testUnifyEquation : Nat := boolNat (resultHolds
+  (bind Substitution Bool (unify tSubLeft tSubRight) (fun (q : Substitution) =>
+    bind Substitution Bool (substCompose q tSubLeft) (fun (l : Substitution) =>
+      resultMap Substitution Bool (fun (r : Substitution) =>
+        boolAnd (substEqual l r) (setEqual q.2 (setSingleton tOne))) (substCompose q tSubRight)))))
+def testUnifyClash : Nat :=
+  let r : Result Substitution := unify
+    (tuple (setSingleton tZero, (fun (x : Tag) => tTermF), tA))
+    (tuple (setSingleton tZero, (fun (x : Tag) => tTermG), tA)) in
+  match r as self in Result return Nat with | success s => 0 | failure e => boolNat (natEq (errorCode e) 9)
+def testUnifyCyclic : Nat :=
+  let r : Result Substitution := unify tSubLeft
+    (tuple (setSingleton tZero, (fun (x : Tag) => application tOp (fun (p : Tag) => termVar tZero)), tA)) in
+  match r as self in Result return Nat with | success s => 0 | failure e => boolNat (natEq (errorCode e) 10)
+def testUnifyEmpty : Nat := boolNat (resultHolds
+  (resultMap Substitution Bool (substEqual (substIdentity tA))
+    (unify (tuple (setEmpty, variable, tA)) (tuple (setEmpty, variable, tA)))))
+def testUnifyNested : Nat := boolNat (resultHolds
+  (bind Substitution Bool
+    (unify (tuple (setSingleton tZero, (fun (x : Tag) => application tOp (fun (p : Tag) => termVar tZero)), tA))
+      (tuple (setSingleton tZero, (fun (x : Tag) => tTermF), tA)))
+    (fun (q : Substitution) => ok Bool (termEqual (q.1 tZero) (q.1 tOne)))))
+def testRecoverableFatal : Nat := boolNat (boolNot (recoverable (at 8 textFinKleisli (cyclic textVar textVar))))
+def testRecoverableWitness : Nat := boolNat (recoverable (at 8 textFinKleisli noWitness))
+def testTermAritySets : Nat :=
+  let op1 : Operator := tuple (listNil Nat, tA) in
+  let op2 : Operator := tuple (listNil Nat, listReverse Tag tA) in
+  boolNat (termEqual (application op1 variable) (application op2 variable))
+def testFkDerivedCoproduct : Nat := boolNat (resultHolds
+  (resultMap (Colimiting FinSet Substitution) Bool (fun (cp : Colimiting FinSet Substitution) => natEq (setCardinality cp.0) 4)
+    (derivedCoproduct FinSet Substitution finKleisliGround tA tB)))

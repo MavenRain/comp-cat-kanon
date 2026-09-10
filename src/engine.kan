@@ -1,0 +1,47 @@
+-- The sole consumer of grounding operations in the generic construction stack.
+-- Exactly one initial, n binary coproducts, and m coequalizers.
+def EngineAcc : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  prod (O, List (prod (Nat, H)), O -> (Nat -> Result H) -> Result H)
+
+def engineStart : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> EngineAcc O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) =>
+  tuple (g.1.0, listNil (prod (Nat, H)), (fun (target : O) (fam : Nat -> Result H) => g.1.1 target))
+
+def engineNode : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Diagram O H ->
+  EngineAcc O H -> Nat -> Result (EngineAcc O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Diagram O H) (a : EngineAcc O H) (n : Nat) =>
+  bind O (EngineAcc O H) (d.1 n) (fun (on : O) =>
+  bind (Coproduct O H) (EngineAcc O H) (g.2 a.0 on) (fun (cp : Coproduct O H) =>
+  bind (List (prod (Nat, H))) (EngineAcc O H)
+    (listMapM (prod (Nat, H)) (prod (Nat, H)) (fun (p : prod (Nat, H)) =>
+      resultMap H (prod (Nat, H)) (fun (h : H) => tuple (p.0, h)) (g.0.4 cp.1 p.1)) a.1)
+    (fun (sides : List (prod (Nat, H))) =>
+      ok (EngineAcc O H) (tuple (cp.0, listCons (prod (Nat, H)) (tuple (n, cp.2)) sides,
+        (fun (target : O) (fam : Nat -> Result H) =>
+          bind H H (a.2 target fam) (fun (u : H) =>
+          bind H H (fam n) (fun (v : H) => cp.3 target u v))))))))
+
+def engineEdge : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Diagram O H ->
+  EngineAcc O H -> Edge -> Result (EngineAcc O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Diagram O H) (a : EngineAcc O H) (e : Edge) =>
+  bind H (EngineAcc O H) (d.2 e.0) (fun (de : H) =>
+  bind H (EngineAcc O H) (listLookup H e.1 a.1) (fun (sp : H) =>
+  bind H (EngineAcc O H) (listLookup H e.2 a.1) (fun (sq : H) =>
+  bind H (EngineAcc O H) (g.0.4 sq de) (fun (rhs : H) =>
+  bind (Coequalizer O H) (EngineAcc O H) (g.3 sp rhs) (fun (ce : Coequalizer O H) =>
+  bind (List (prod (Nat, H))) (EngineAcc O H)
+    (listMapM (prod (Nat, H)) (prod (Nat, H)) (fun (p : prod (Nat, H)) =>
+      resultMap H (prod (Nat, H)) (fun (h : H) => tuple (p.0, h)) (g.0.4 ce.1 p.1)) a.1)
+    (fun (sides : List (prod (Nat, H))) =>
+      ok (EngineAcc O H) (tuple (ce.0, sides, (fun (target : O) (fam : Nat -> Result H) =>
+        bind H H (a.2 target fam) (fun (u : H) => ce.2 target u))))))))))
+
+def engineColimit : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Diagram O H -> Result (Colimiting O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Diagram O H) =>
+  bind (EngineAcc O H) (Colimiting O H)
+    (listFoldM Nat (EngineAcc O H) d.0.0 (engineStart O H g) (engineNode O H g d))
+    (fun (a : EngineAcc O H) =>
+      resultMap (EngineAcc O H) (Colimiting O H)
+        (fun (z : EngineAcc O H) => tuple (z.0, (fun (n : Nat) => listLookup H n z.1), z.2))
+        (listFoldM Edge (EngineAcc O H) d.0.1 a (engineEdge O H g d)))

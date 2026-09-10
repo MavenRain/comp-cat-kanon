@@ -1,0 +1,41 @@
+def tSpec : Temporal Nat := temporalTrue Nat
+def tPredOne : Temporal Nat := temporalState Nat textEdge (natEq 1)
+def tAction : Temporal Nat := temporalAction Nat textArrow (fun (a : Nat) (b : Nat) => natEq b (natAdd a 1))
+def testRuleTrans : Nat := boolNat (resultHolds (resultMap (Fact Nat) Bool
+  (fun (f : Fact Nat) => temporalEqual Nat f.1 (leadsTo Nat tPredZero tPredZero))
+  (leadsToTrans Nat (assume Nat tSpec (leadsTo Nat tPredZero tPredOne)) (assume Nat tSpec (leadsTo Nat tPredOne tPredZero)))))
+def testRuleMiddleRejects : Nat := match (leadsToTrans Nat
+  (assume Nat tSpec (leadsTo Nat tPredZero tPredOne)) (assume Nat tSpec (leadsTo Nat tPredZero tPredOne))) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 15) | success f => 0
+def testRuleSpecRejects : Nat := match (leadsToTrans Nat
+  (leadsToSelf Nat tSpec tPredZero) (leadsToSelf Nat tPredOne tPredZero)) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 15) | success f => 0
+def testRuleApply : Nat := boolNat (resultHolds (resultMap (Fact Nat) Bool
+  (fun (f : Fact Nat) => temporalEqual Nat f.1 (temporalEventually Nat tPredOne))
+  (leadsToApply Nat (assume Nat tSpec tPredZero) (assume Nat tSpec (leadsTo Nat tPredZero tPredOne)))))
+def testRuleInvariant : Nat := boolNat (resultHolds (resultMap (Fact Nat) Bool
+  (fun (f : Fact Nat) => temporalEqual Nat f.1 (temporalAlways Nat tPredZero))
+  (initInvariant Nat tSpec tPredZero (fun (u : One) => ok Bool true) (fun (u : One) => ok Bool true)
+    (assume Nat tSpec tPredZero) (assume Nat tSpec (temporalAlways Nat tAction)))))
+def testRuleObligationRejects : Nat := match (initInvariant Nat tSpec tPredZero
+  (fun (u : One) => ok Bool false) (fun (u : One) => ok Bool true)
+  (assume Nat tSpec tPredZero) (assume Nat tSpec (temporalAlways Nat tAction))) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 15) | success f => 0
+def tOmegaEq : OmegaValue -> OmegaValue -> Bool := fun (a : OmegaValue) (b : OmegaValue) => boolAnd (omegaLeq a b) (omegaLeq b a)
+def testTreeTruth : Nat := boolNat (treeCommutes One OmegaValue tOmegaEq tFuel treeTruth)
+def testTreeOmegaFibre : Nat := boolNat (natEq (listLength OmegaValue (treeOmega.0 (stageSucc (stageSucc stageZero)))) 3)
+def testTreeCharacter : Nat := boolNat (resultHolds (resultMap (TreeHom One OmegaValue) Bool
+  (fun (h : TreeHom One OmegaValue) => tOmegaEq (h.2 tFuel one) (omegaFinite (stageNat tFuel)))
+  (treeCharacter One (tuple (treeTerminal, (fun (n : Stage) (u : One) => true))))))
+def testTreeFalseCharacter : Nat := boolNat (resultHolds (resultMap (TreeHom One OmegaValue) Bool
+  (fun (h : TreeHom One OmegaValue) => tOmegaEq (h.2 tFuel one) (omegaFinite 0))
+  (treeCharacter One (tuple (treeTerminal, (fun (n : Stage) (u : One) => false))))))
+def testLaterZero : Nat := match ((treeNext One treeTerminal).2 stageZero one) as v in Option return Nat with
+  | absent => 1 | present value => 0
+def testLaterSuccessor : Nat := match ((treeNext One treeTerminal).2 (stageSucc stageZero) one) as v in Option return Nat with
+  | absent => 0 | present value => 1
+def testLaterGuardRejects : Nat := match (treeLaterFix One treeTerminal (fun (s : TreeSubobject One) => s) false) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 5) | success s => 0
+def testLaterFixedTrue : Nat := boolNat (resultHolds (resultMap (TreeSubobject One) Bool
+  (fun (s : TreeSubobject One) => s.1 tFuel one)
+  (treeLaterFix One treeTerminal (fun (s : TreeSubobject One) => tuple (treeTerminal, (fun (n : Stage) (u : One) => true))) true)))

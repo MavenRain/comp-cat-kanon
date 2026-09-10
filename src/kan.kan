@@ -1,0 +1,100 @@
+-- Pointwise Lan over comma categories. Ran is the same construction in Op.
+def CommaObject : (0 J : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 J : Type 0) (0 H : Type 0) => prod (J, H)
+def Fibre : (0 J : Type 0) -> (0 Q : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 J : Type 0) (0 Q : Type 0) (0 O : Type 0) (0 H : Type 0) =>
+  prod (List (prod (Nat, CommaObject J Q)), Colimiting O H)
+
+def lanFibre : (0 J : Type 0) -> (0 K : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  (0 O : Type 0) -> (0 H : Type 0) -> FiniteCategory J K -> HomFinite P Q -> Grounding O H ->
+  Functor J K P Q -> Functor J K O H -> P -> Result (Fibre J Q O H) :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 P : Type 0) (0 Q : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (ccat : HomFinite P Q) (ground : Grounding O H)
+    (k : Functor J K P Q) (f : Functor J K O H) (c : P) =>
+  bind (List (List (CommaObject J Q))) (Fibre J Q O H)
+    (listMapM J (List (CommaObject J Q)) (fun (j : J) =>
+      resultMap P (List (CommaObject J Q)) (fun (kj : P) =>
+        listMap Q (CommaObject J Q) (fun (u : Q) => tuple (j, u)) (ccat.1 kj c)) (k.1 j)) jcat.1)
+    (fun (raw : List (List (CommaObject J Q))) =>
+      let objects : List (prod (Nat, CommaObject J Q)) := listIndexed (CommaObject J Q) (listConcat (CommaObject J Q) raw) in
+      let arrows : List (prod (Nat, Nat, K)) :=
+        listConcat (prod (Nat, Nat, K)) (listMap (prod (Nat, CommaObject J Q)) (List (prod (Nat, Nat, K)))
+          (fun (a : prod (Nat, CommaObject J Q)) =>
+            listConcat (prod (Nat, Nat, K)) (listMap (prod (Nat, CommaObject J Q)) (List (prod (Nat, Nat, K)))
+              (fun (b : prod (Nat, CommaObject J Q)) =>
+                listMap K (prod (Nat, Nat, K)) (fun (u : K) => tuple (a.0, b.0, u))
+                  (listFilter K (fun (u : K) => resultHolds
+                    (bind Q Bool (k.2 u) (fun (ku : Q) =>
+                      resultMap Q Bool (fun (w : Q) => ccat.0.6 w a.1.1) (ccat.0.4 b.1.1 ku))))
+                    (jcat.0.1 a.1.0 b.1.0))) objects)) objects) in
+      let indexed : List (prod (Nat, prod (Nat, Nat, K))) := listIndexed (prod (Nat, Nat, K)) arrows in
+      let shape : Shape := tuple (
+        listMap (prod (Nat, CommaObject J Q)) Nat (fun (a : prod (Nat, CommaObject J Q)) => a.0) objects,
+        listMap (prod (Nat, prod (Nat, Nat, K))) Edge (fun (e : prod (Nat, prod (Nat, Nat, K))) => tuple (e.0, e.1.0, e.1.1)) indexed) in
+      let d : Diagram O H := tuple (shape,
+        (fun (n : Nat) => bind (CommaObject J Q) O (listLookup (CommaObject J Q) n objects) (fun (a : CommaObject J Q) => f.1 a.0)),
+        (fun (e : Nat) => bind (prod (Nat, Nat, K)) H (listLookup (prod (Nat, Nat, K)) e indexed) (fun (a : prod (Nat, Nat, K)) => f.2 a.2))) in
+      resultMap (Colimiting O H) (Fibre J Q O H) (fun (col : Colimiting O H) => tuple (objects, col)) (engineColimit O H ground d))
+
+def Kan : (0 J : Type 0) -> (0 K : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 P : Type 0) (0 Q : Type 0) (0 O : Type 0) (0 H : Type 0) =>
+  prod (P -> Result (Colimiting O H), P -> J -> Q -> Result H,
+    P -> O -> (J -> Q -> Result H) -> Result H,
+    Functor P Q O H, J -> Result H,
+    Functor P Q O H -> (J -> Result H) -> P -> Result H,
+    Functor P Q O H -> (J -> Result H) -> J -> Result Bool,
+    Functor P Q O H -> (J -> Result H) -> (P -> Result H) -> P -> Result Bool)
+
+def lan : (0 J : Type 0) -> (0 K : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  (0 O : Type 0) -> (0 H : Type 0) -> FiniteCategory J K -> HomFinite P Q -> Grounding O H ->
+  Functor J K P Q -> Functor J K O H -> Kan J K P Q O H :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 P : Type 0) (0 Q : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (ccat : HomFinite P Q) (ground : Grounding O H)
+    (k : Functor J K P Q) (f : Functor J K O H) =>
+  let fibre : P -> Result (Fibre J Q O H) := lanFibre J K P Q O H jcat ccat ground k f in
+  let locate : Fibre J Q O H -> J -> Q -> Result Nat :=
+    fun (fb : Fibre J Q O H) (j : J) (u : Q) =>
+    resultMap (prod (Nat, CommaObject J Q)) Nat (fun (a : prod (Nat, CommaObject J Q)) => a.0)
+      (listFind (prod (Nat, CommaObject J Q)) (fun (a : prod (Nat, CommaObject J Q)) =>
+        boolAnd (jcat.0.0.5 a.1.0 j) (ccat.0.6 a.1.1 u))
+        (illFormed (listNil Nat) (listNil Nat)) fb.0) in
+  let colimAt : P -> Result (Colimiting O H) := fun (c : P) =>
+    resultMap (Fibre J Q O H) (Colimiting O H) (fun (fb : Fibre J Q O H) => fb.1) (fibre c) in
+  let leg : P -> J -> Q -> Result H := fun (c : P) (j : J) (u : Q) =>
+    bind (Fibre J Q O H) H (fibre c) (fun (fb : Fibre J Q O H) => bind Nat H (locate fb j u) fb.1.1) in
+  let mediate : P -> O -> (J -> Q -> Result H) -> Result H :=
+    fun (c : P) (target : O) (legs : J -> Q -> Result H) =>
+    bind (Fibre J Q O H) H (fibre c) (fun (fb : Fibre J Q O H) =>
+      fb.1.2 target (fun (n : Nat) => bind (CommaObject J Q) H
+        (listLookup (CommaObject J Q) n fb.0) (fun (a : CommaObject J Q) => legs a.0 a.1))) in
+  let obj : P -> Result O := fun (c : P) => resultMap (Colimiting O H) O (fun (col : Colimiting O H) => col.0) (colimAt c) in
+  let hom : Q -> Result H := fun (h : Q) =>
+    bind (Fibre J Q O H) H (fibre (ccat.0.1 h)) (fun (src : Fibre J Q O H) =>
+    bind (Fibre J Q O H) H (fibre (ccat.0.2 h)) (fun (tgt : Fibre J Q O H) =>
+      src.1.2 tgt.1.0 (fun (n : Nat) =>
+        bind (CommaObject J Q) H (listLookup (CommaObject J Q) n src.0) (fun (a : CommaObject J Q) =>
+        bind Q H (ccat.0.4 h a.1) (fun (u : Q) =>
+        bind Nat H (locate tgt a.0 u) tgt.1.1))))) in
+  let unit : J -> Result H := fun (j : J) => bind P H (k.1 j) (fun (kj : P) => leg kj j (ccat.0.3 kj)) in
+  let desc : Functor P Q O H -> (J -> Result H) -> P -> Result H :=
+    fun (g : Functor P Q O H) (alpha : J -> Result H) (c : P) =>
+    bind O H (g.1 c) (fun (gc : O) => mediate c gc (fun (j : J) (u : Q) =>
+      bind H H (g.2 u) (fun (gu : H) => bind H H (alpha j) (fun (aj : H) => ground.0.4 gu aj)))) in
+  let fac : Functor P Q O H -> (J -> Result H) -> J -> Result Bool :=
+    fun (g : Functor P Q O H) (alpha : J -> Result H) (j : J) =>
+    bind P Bool (k.1 j) (fun (kj : P) => bind H Bool (unit j) (fun (u : H) =>
+    bind H Bool (desc g alpha kj) (fun (d : H) => bind H Bool (ground.0.4 d u) (fun (lhs : H) =>
+      resultMap H Bool (ground.0.6 lhs) (alpha j))))) in
+  let uniq : Functor P Q O H -> (J -> Result H) -> (P -> Result H) -> P -> Result Bool :=
+    fun (g : Functor P Q O H) (alpha : J -> Result H) (beta : P -> Result H) (c : P) =>
+    bind H Bool (beta c) (fun (b : H) => resultMap H Bool (ground.0.6 b) (desc g alpha c)) in
+  tuple (colimAt, leg, mediate, tuple (listNil Nat, obj, hom), unit, desc, fac, uniq)
+
+def ran : (0 J : Type 0) -> (0 K : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  (0 O : Type 0) -> (0 H : Type 0) -> FiniteCategory J K -> HomFinite P Q -> Grounding O H ->
+  Functor J K P Q -> Functor J K O H -> Kan J K P Q O H :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 P : Type 0) (0 Q : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (ccat : HomFinite P Q) (dualGround : Grounding O H)
+    (k : Functor J K P Q) (f : Functor J K O H) =>
+  lan J K P Q O H (oppositeFinite J K jcat) (oppositeHom P Q ccat) dualGround k f

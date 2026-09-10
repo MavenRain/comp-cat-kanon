@@ -1,0 +1,51 @@
+def tagGraphFromList : FinGraph -> TagGraph := fun (xs : FinGraph) =>
+  listFold (prod (Tag, Tag)) TagGraph (listReverse (prod (Tag, Tag)) xs) tagGraphNil
+    (fun (rest : TagGraph) (p : prod (Tag, Tag)) => tagGraphCons p.0 p.1 rest)
+def rec tagGraphToList : TagGraph -> FinGraph := fun (g : TagGraph) =>
+  match g as self in TagGraph return FinGraph with
+  | tagGraphNil => listNil (prod (Tag, Tag))
+  | tagGraphCons x y rest => listCons (prod (Tag, Tag)) (tuple (x, y)) (tagGraphToList rest)
+def tagUntuple : Tag -> Result FinGraph := fun (t : Tag) =>
+  match t as self in Tag return Result FinGraph with
+  | tagJust n => err FinGraph (notInDomain textTuple (tagText t))
+  | tagWord s => err FinGraph (notInDomain textTuple (tagText t))
+  | tagPink x => err FinGraph (notInDomain textTuple (tagText t))
+  | tagBlue x => err FinGraph (notInDomain textTuple (tagText t))
+  | tagPair x y => err FinGraph (notInDomain textTuple (tagText t))
+  | tagTrue => err FinGraph (notInDomain textTuple (tagText t))
+  | tagFalse => err FinGraph (notInDomain textTuple (tagText t))
+  | tagTuple g => ok FinGraph (tagGraphToList g)
+def functionSpace : FinSet -> FinSet -> FinSet := fun (a : FinSet) (b : FinSet) =>
+  listMap FinGraph Tag (fun (g : FinGraph) => tagTuple (tagGraphFromList g)) (setGraphs a b)
+def setExponential : Exponentials FinSet FinArrow := fun (a : FinSet) (b : FinSet) =>
+  let fs : FinSet := functionSpace a b in
+  bind (Coproduct FinSet FinArrow) (Exponential FinSet FinArrow) (setProduct fs a) (fun (p : Coproduct FinSet FinArrow) =>
+  resultMap FinArrow (Exponential FinSet FinArrow) (fun (eval : FinArrow) => tuple (fs, eval,
+    (fun (c : FinSet) (f : FinArrow) => setMakeM c fs (fun (y : Tag) =>
+      resultMap FinGraph Tag (fun (g : FinGraph) => tagTuple (tagGraphFromList g))
+        (listMapM Tag (prod (Tag, Tag)) (fun (z : Tag) => resultMap Tag (prod (Tag, Tag))
+          (fun (v : Tag) => tuple (z, v)) (setApply f (tagPair z y))) a)))))
+    (setMakeM p.0 b (fun (x : Tag) => bind (prod (Tag, Tag)) Tag (tagUnpair x) (fun (q : prod (Tag, Tag)) =>
+      bind FinGraph Tag (tagUntuple q.0) (fun (g : FinGraph) => graphLookup g q.1)))))
+def setImage : FinArrow -> FinSet := fun (h : FinArrow) =>
+  setNormal (listMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.1) h.1)
+def setPreimage : FinArrow -> Tag -> Result Tag := fun (h : FinArrow) (y : Tag) =>
+  listFind Tag (fun (x : Tag) => resultHolds (resultMap Tag Bool (tagEqual y) (setApply h x)))
+    (notInDomain textFinsetApp (tagText y)) h.0
+def boolOmega : FinSet := listCons Tag tagTrue (setSingleton tagFalse)
+def boolTruth : FinArrow := setMake setTerminal.0 boolOmega (fun (x : Tag) => tagTrue)
+def boolChi : FinArrow -> FinArrow := fun (m : FinArrow) =>
+  let image : FinSet := setImage m in
+  setMake m.2 boolOmega (fun (x : Tag) => case (setMember x image) with | 0 (u : Unit) => tagFalse | 1 (u : Unit) => tagTrue)
+def boolChiM : FinArrow -> Result FinArrow := fun (m : FinArrow) =>
+  resultMap FinSet FinArrow (fun (image : FinSet) =>
+    setMake m.2 boolOmega (fun (x : Tag) => case (setMember x image) with
+      | 0 (u : Unit) => tagFalse | 1 (u : Unit) => tagTrue)) (listMapM Tag Tag (setApply m) m.0)
+def boolClassifier : Classifier FinSet FinArrow := tuple (boolOmega, boolTruth,
+  (fun (m : FinArrow) => bind FinArrow (PullbackSquare FinArrow) (boolChiM m) (fun (chi : FinArrow) =>
+    resultMap FinArrow (PullbackSquare FinArrow)
+    (fun (bang : FinArrow) => tuple (boolTruth, chi, bang, m,
+      (fun (f : FinArrow) (q : FinArrow) =>
+        bind FinArrow FinArrow (setMakeM m.2 m.0 (setPreimage m)) (fun (inverse : FinArrow) => setCompose inverse q))))
+    (setTerminal.1 m.0))))
+def finSetTopos : Topos FinSet FinArrow := tuple (textFinSet, setExponential, boolClassifier)

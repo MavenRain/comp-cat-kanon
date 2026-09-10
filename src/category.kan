@@ -1,0 +1,69 @@
+-- Categories are explicit typed dictionaries. O and H erase at runtime.
+-- Composition keeps the book's order: outer arrow first.
+def Category : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  prod (Text, H -> O, H -> O, O -> H, H -> H -> Result H,
+        O -> O -> Bool, H -> H -> Bool, O -> Text, H -> Text)
+def opposite : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Category O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) =>
+  tuple (c.0, c.2, c.1, c.3, (fun (g : H) (f : H) => c.4 f g), c.5, c.6, c.7, c.8)
+
+def HomFinite : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Category O H, O -> O -> List H)
+def FiniteCategory : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (HomFinite O H, List O, List H)
+def oppositeHom : (0 O : Type 0) -> (0 H : Type 0) -> HomFinite O H -> HomFinite O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : HomFinite O H) =>
+  tuple (opposite O H c.0, (fun (a : O) (b : O) => c.1 b a))
+def oppositeFinite : (0 O : Type 0) -> (0 H : Type 0) -> FiniteCategory O H -> FiniteCategory O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : FiniteCategory O H) =>
+  tuple (oppositeHom O H c.0, c.1, c.2)
+
+def Functor : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) =>
+  prod (Text, O -> Result P, H -> Result Q)
+def identityFunctor : (0 O : Type 0) -> (0 H : Type 0) -> Functor O H O H :=
+  fun (0 O : Type 0) (0 H : Type 0) => tuple (listNil Nat, ok O, ok H)
+def composeFunctor : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  (0 R : Type 0) -> (0 S : Type 0) -> Functor P Q R S -> Functor O H P Q -> Functor O H R S :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (0 R : Type 0) (0 S : Type 0)
+    (g : Functor P Q R S) (f : Functor O H P Q) =>
+  tuple (listNil Nat, (fun (o : O) => bind P R (f.1 o) g.1), (fun (h : H) => bind Q S (f.2 h) g.2))
+def Natural : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Text, O -> Result H)
+
+def unitCategory : Category One One := tuple (listNil Nat,
+  (fun (u : One) => one), (fun (u : One) => one), (fun (u : One) => one),
+  (fun (g : One) (f : One) => ok One one),
+  (fun (a : One) (b : One) => true), (fun (a : One) (b : One) => true),
+  (fun (u : One) => listNil Nat), (fun (u : One) => listNil Nat))
+def terminalCategory : FiniteCategory One One :=
+  tuple (tuple (unitCategory, (fun (a : One) (b : One) => listCons One one (listNil One))),
+    listCons One one (listNil One), listCons One one (listNil One))
+def terminalFunctor : (0 O : Type 0) -> (0 H : Type 0) -> Functor O H One One :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  tuple (listNil Nat, (fun (o : O) => ok One one), (fun (h : H) => ok One one))
+
+-- The three Skolemised universals supplied by a grounding.
+def Initial : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, O -> Result H)
+def Coproduct : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H, H, O -> H -> H -> Result H)
+def Coequalizer : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H, O -> H -> Result H)
+def Grounding : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  prod (Category O H, Initial O H, O -> O -> Result (Coproduct O H), H -> H -> Result (Coequalizer O H))
+def IsoCategory : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Category O H, H -> Bool, H -> Result H)
+
+def Edge : Type 0 := prod (Nat, Nat, Nat)
+def Shape : Type 0 := prod (List Nat, List Edge)
+def Diagram : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Shape, Nat -> Result O, Nat -> Result H)
+def Colimiting : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, Nat -> Result H, O -> (Nat -> Result H) -> Result H)
+def shapeEmpty : Shape := tuple (listNil Nat, listNil Edge)
+def shapeDiscreteTwo : Shape := tuple (listCons Nat 0 (listCons Nat 1 (listNil Nat)), listNil Edge)
+def shapeParallel : Shape := tuple (shapeDiscreteTwo.0,
+  listCons Edge (tuple (0, 0, 1)) (listCons Edge (tuple (1, 0, 1)) (listNil Edge)))

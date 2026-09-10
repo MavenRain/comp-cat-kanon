@@ -1,0 +1,5 @@
+mu Box (A : Type 0) : Type 0 :=
+| box (value : A) : Box A
+def makeBox : (0 A : Type 0) -> A -> Box A := fun (0 A : Type 0) (a : A) => box a
+def boxedNat : Box Nat := box 7
+def boxProbe : Nat := match boxedNat as b in Box return Nat with | box n => n

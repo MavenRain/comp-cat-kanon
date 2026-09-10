@@ -1,0 +1,28 @@
+def naturalRing : (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  Category P Q -> NatTransform O H P Q -> NatTransform A B O H -> NatTransform A B P Q :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0)
+    (c : Category P Q) (beta : NatTransform O H P Q) (alpha : NatTransform A B O H) =>
+  tuple (composeFunctor A B O H P Q beta.0 alpha.0,
+    tuple (textAppend beta.1.0 alpha.1.0, (fun (a : A) =>
+      bind O Q (alpha.2.1 a) (fun (fa : O) => bind Q Q (beta.1.1 fa) (fun (b : Q) =>
+      bind H Q (alpha.1.1 a) (fun (aa : H) => bind Q Q (beta.0.2 aa) (c.4 b)))))),
+    composeFunctor A B O H P Q beta.2 alpha.2)
+def applyDiagram : (0 J : Type 0) -> (0 K : Type 0) -> (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  Functor J K (Functor A B O H) (NatTransform A B O H) -> A -> Functor J K O H :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (d : Functor J K (Functor A B O H) (NatTransform A B O H)) (a : A) =>
+  tuple (d.0, (fun (j : J) => bind (Functor A B O H) O (d.1 j) (fun (f : Functor A B O H) => f.1 a)),
+    (fun (k : K) => bind (NatTransform A B O H) H (d.2 k) (fun (n : NatTransform A B O H) => n.1.1 a)))
+def colimitingFunctor : (0 J : Type 0) -> (0 K : Type 0) -> (0 A : Type 0) -> (0 B : Type 0) -> (0 O : Type 0) -> (0 H : Type 0) ->
+  FiniteCategory J K -> Category A B -> Grounding O H ->
+  Functor J K (Functor A B O H) (NatTransform A B O H) -> Functor A B O H :=
+  fun (0 J : Type 0) (0 K : Type 0) (0 A : Type 0) (0 B : Type 0) (0 O : Type 0) (0 H : Type 0)
+    (jcat : FiniteCategory J K) (acat : Category A B) (g : Grounding O H)
+    (d : Functor J K (Functor A B O H) (NatTransform A B O H)) =>
+  let at : A -> Kan J K One One O H := fun (a : A) =>
+    lan J K One One O H jcat terminalCategory.0 g (terminalFunctor J K) (applyDiagram J K A B O H d a) in
+  tuple (d.0, (fun (a : A) => (at a).3.1 one),
+    (fun (f : B) => bind O H ((at (acat.2 f)).3.1 one) (fun (target : O) =>
+      (at (acat.1 f)).2 one target (fun (j : J) (u : One) =>
+        bind H H ((at (acat.2 f)).1 one j one) (fun (leg : H) =>
+          bind (Functor A B O H) H (d.1 j) (fun (dj : Functor A B O H) => bind H H (dj.2 f) (g.0.4 leg)))))))

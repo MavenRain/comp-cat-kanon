@@ -1,0 +1,52 @@
+def textAppend : Text -> Text -> Text := listAppend Nat
+def textConcat : List Text -> Text := listConcat Nat
+def textJoin : Text -> List Text -> Text := fun (sep : Text) (parts : List Text) =>
+  let r : prod (Bool, Text) := listFold Text (prod (Bool, Text)) parts (tuple (false, listNil Nat))
+    (fun (acc : prod (Bool, Text)) (p : Text) => tuple (true,
+      (case acc.0 with | 0 (u : Unit) => p | 1 (u : Unit) => textAppend (textAppend acc.1 sep) p))) in r.1
+-- Decimal extraction covers the complete source OCaml integer range.
+def natPick : Bool -> Nat -> Nat -> Nat := fun (b : Bool) (yes : Nat) (no : Nat) =>
+  case b with | 0 (u : Unit) => no | 1 (u : Unit) => yes
+def decimalDigit : Nat -> Nat -> Nat := fun (n : Nat) (power : Nat) =>
+  natPick (natLt n (natMul power 1)) 0 (natPick (natLt n (natMul power 2)) 1 (natPick (natLt n (natMul power 3)) 2 (natPick (natLt n (natMul power 4)) 3 (natPick (natLt n (natMul power 5)) 4 (natPick (natLt n (natMul power 6)) 5 (natPick (natLt n (natMul power 7)) 6 (natPick (natLt n (natMul power 8)) 7 (natPick (natLt n (natMul power 9)) 8 (9)))))))))
+def rec decimalAcc : List Nat -> Nat -> Bool -> Text -> Text :=
+  fun (powers : List Nat) (value : Nat) (started : Bool) (acc : Text) =>
+  match powers as self in List return Text with
+  | nil => listReverse Nat acc
+  | cons power tail =>
+    let digit : Nat := decimalDigit value power in
+    let emit : Bool := boolOr started (boolOr (boolNot (natEq digit 0)) (natEq power 1)) in
+    let next : Text := (case emit with | 0 (u : Unit) => acc | 1 (u : Unit) => listCons Nat (natAdd digit 48) acc) in
+    decimalAcc tail (natSub value (natMul digit power)) emit next
+def natText : Nat -> Text := fun (n : Nat) => case (natLt n 10000000000000000000) with
+  | 0 (u : Unit) => textDecimalRange
+  | 1 (u : Unit) => decimalAcc decimalPowers n false (listNil Nat)
+def natTextChecked : Nat -> Result Text := fun (n : Nat) => case (natLt n 10000000000000000000) with
+  | 0 (u : Unit) => err Text (unsupported textDecimalRange textDecimalRange)
+  | 1 (u : Unit) => ok Text (decimalAcc decimalPowers n false (listNil Nat))
+def resultContext : (0 A : Type 0) -> Nat -> Text -> Result A -> Result A :=
+  fun (0 A : Type 0) (chapter : Nat) (fn : Text) (r : Result A) =>
+  match r as self in Result return Result A with
+  | failure e => err A (at chapter fn e)
+  | success a => ok A a
+def rec errorText : Error -> Text := fun (e : Error) =>
+  match e as self in Error return Text with
+  | notComposable cat outer inner => textAppend cat (textAppend textNotComposable
+      (textAppend inner (textAppend textNeqSrc (textAppend outer textCloseParen))))
+  | noSuchArrow cat src tgt => textAppend cat (textAppend textNoArrow (textAppend src (textAppend textSpaceArrow tgt)))
+  | notInShape kind ident => textAppend textNoSuch (textAppend kind (textAppend textColon (natText ident)))
+  | notInDomain fn arg => textAppend fn (textAppend textColon (textAppend arg textOutside))
+  | notUniversal detail => textAppend textUniversal detail
+  | notMonic cat arrow => textAppend cat (textAppend textColon (textAppend arrow textIsNotMonic))
+  | emptySet fn => textAppend fn textEmptySet
+  | notSingleton fn card => textAppend fn (textAppend textNotSingleton (natText card))
+  | clash l r => textAppend textClash (textAppend l (textAppend textVersus r))
+  | cyclic v t => textAppend textCyclic (textAppend v (textAppend textOccurs t))
+  | irreducible fn => textAppend fn textIrreducible
+  | noWitness => textNoWitness
+  | budget fn steps => textAppend fn (textAppend textBudget (textAppend (natText steps) textSteps))
+  | unbound ns name => textAppend textUnbound (textAppend name (textAppend textIn ns))
+  | illFormed fn why => textAppend fn (textAppend textIllFormed (textAppend why textCloseParen))
+  | unsupported fn why => textAppend fn (textAppend textUnsupported (textAppend why textCloseParen))
+  | at chapter fn inner => textAppend textCh (textAppend (natText chapter)
+      (textAppend textSlash (textAppend fn (textAppend textContext (errorText inner)))))

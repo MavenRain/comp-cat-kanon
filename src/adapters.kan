@@ -1,0 +1,54 @@
+-- Runtime state is explicit: successful memo entries are threaded by the caller.
+def Memo : (0 K : Type 0) -> (0 V : Type 0) -> Type 0 :=
+  fun (0 K : Type 0) (0 V : Type 0) => List (prod (K, V))
+def shapeDiscrete : Fuel -> Shape := fun (size : Fuel) => tuple (
+  listMap (prod (Nat, One)) Nat (fun (entry : prod (Nat, One)) => entry.0) (listIndexed One size), listNil Edge)
+def memoGet : (0 K : Type 0) -> (0 V : Type 0) -> (K -> K -> Bool) -> K -> (One -> Result V) -> Memo K V -> prod (Result V, Memo K V) :=
+  fun (0 K : Type 0) (0 V : Type 0) (eq : K -> K -> Bool) (key : K) (compute : One -> Result V) (cache : Memo K V) =>
+  match (listFind (prod (K, V)) (fun (p : prod (K, V)) => eq key p.0) noWitness cache) as found in Result return prod (Result V, Memo K V) with
+  | success p => tuple (ok V p.1, cache)
+  | failure ignored => (match (compute one) as result in Result return prod (Result V, Memo K V) with
+    | failure e => tuple (err V e, cache)
+    | success v => tuple (ok V v, listCons (prod (K, V)) (tuple (key, v)) cache))
+def resultBoth : (0 A : Type 0) -> (0 B : Type 0) -> Result A -> Result B -> Result (prod (A, B)) :=
+  fun (0 A : Type 0) (0 B : Type 0) (a : Result A) (b : Result B) =>
+  bind A (prod (A, B)) a (fun (x : A) => resultMap B (prod (A, B)) (fun (y : B) => tuple (x, y)) b)
+def resultOfOption : (0 A : Type 0) -> Error -> Option A -> Result A :=
+  fun (0 A : Type 0) (e : Error) (o : Option A) => match o as self in Option return Result A with
+  | absent => err A e | present v => ok A v
+def resultAll : (0 A : Type 0) -> List (Result A) -> Result (List A) :=
+  fun (0 A : Type 0) (xs : List (Result A)) => listMapM (Result A) A (fun (r : Result A) => r) xs
+def totalFunctor : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  Text -> (O -> P) -> (H -> Q) -> Functor O H P Q :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (name : Text) (obj : O -> P) (hom : H -> Q) =>
+  tuple (name, (fun (o : O) => ok P (obj o)), (fun (h : H) => ok Q (hom h)))
+def isoCanonical : (0 O : Type 0) -> (0 H : Type 0) -> Initial O H -> Initial O H -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (a : Initial O H) (b : Initial O H) => resultBoth H H (a.1 b.0) (b.1 a.0)
+def isoFromColimiting : (0 O : Type 0) -> (0 H : Type 0) -> Colimiting O H -> Colimiting O H -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (a : Colimiting O H) (b : Colimiting O H) =>
+  resultBoth H H (a.2 b.0 b.1) (b.2 a.0 a.1)
+def exponentialToAdjunction : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> Exponentials O H -> Adjunction O H O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (a : O) (ex : Exponentials O H) =>
+  let c : Category O H := opposite O H d.0 in
+  tuple (c.0, productFunctor O H d a, exponentialFunctor O H c ex a,
+    (fun (b : O) => bind (Coproduct O H) H (kanProduct O H d a b) (fun (p : Coproduct O H) =>
+      bind (Exponential O H) H (ex a p.0) (fun (e : Exponential O H) => e.2 b (c.3 p.0)))),
+    (fun (b : O) => resultMap (Exponential O H) H (fun (e : Exponential O H) => e.1) (ex a b)))
+def CartesianClosed : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Text, Initial O H, O -> O -> Result (Coproduct O H), Exponentials O H)
+def cartesianClosed : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Exponentials O H -> CartesianClosed O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (ex : Exponentials O H) => tuple (d.0.0, d.1, d.2, ex)
+def commaSwapObject : (0 A : Type 0) -> (0 M : Type 0) -> (0 B : Type 0) -> CommaObj A M B -> CommaObj B M A :=
+  fun (0 A : Type 0) (0 M : Type 0) (0 B : Type 0) (o : CommaObj A M B) => tuple (o.2, o.1, o.0)
+def commaSwapHom : (0 A : Type 0) -> (0 H : Type 0) -> (0 M : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  CommaHom A H M B K -> CommaHom B K M A H :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 M : Type 0) (0 B : Type 0) (0 K : Type 0) (h : CommaHom A H M B K) =>
+  tuple (commaSwapObject A M B h.3, h.2, h.1, commaSwapObject A M B h.0)
+def transportColimit : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  Functor O H P Q -> Functor P Q O H -> Colimiting O H -> Result (Colimiting P Q) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0)
+    (forward : Functor O H P Q) (backward : Functor P Q O H) (col : Colimiting O H) =>
+  resultMap P (Colimiting P Q) (fun (apex : P) => tuple (apex,
+    (fun (n : Nat) => bind H Q (col.1 n) forward.2),
+    (fun (target : P) (legs : Nat -> Result Q) => bind O Q (backward.1 target) (fun (t : O) =>
+      bind H Q (col.2 t (fun (n : Nat) => bind Q H (legs n) backward.2)) forward.2)))) (forward.1 col.0)

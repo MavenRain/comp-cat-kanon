@@ -1,0 +1,157 @@
+-- Explicit results and structural finite collections shared by every layer.
+def Unit : Type 0 := prod ()
+-- A runtime singleton for polymorphic APIs. Empty products erase in Kanon.
+mu One : Type 0 :=
+| one : One
+def Bool : Type 0 := sum ((prod () : Type 0), (prod () : Type 0))
+def false : Bool := inj 0 of 2 ()
+def true : Bool := inj 1 of 2 ()
+def boolNot : Bool -> Bool := fun (b : Bool) =>
+  case b with | 0 (u : Unit) => true | 1 (u : Unit) => false
+def boolAnd : Bool -> Bool -> Bool := fun (a : Bool) (b : Bool) =>
+  case a with | 0 (u : Unit) => false | 1 (u : Unit) => b
+def boolOr : Bool -> Bool -> Bool := fun (a : Bool) (b : Bool) =>
+  case a with | 0 (u : Unit) => b | 1 (u : Unit) => true
+def boolNat : Bool -> Nat := fun (b : Bool) =>
+  case b with | 0 (u : Unit) => 0 | 1 (u : Unit) => 1
+
+mu List (0 A : Type 0) : Type 0 :=
+| nil : List A
+| cons (head : A) (tail : List A) : List A
+
+def listNil : (0 A : Type 0) -> List A := fun (0 A : Type 0) => (nil : List A)
+def listCons : (0 A : Type 0) -> A -> List A -> List A :=
+  fun (0 A : Type 0) (x : A) (xs : List A) => (cons x xs : List A)
+
+mu Option (0 A : Type 0) : Type 0 :=
+| absent : Option A
+| present (value : A) : Option A
+def none : (0 A : Type 0) -> Option A := fun (0 A : Type 0) => (absent : Option A)
+def some : (0 A : Type 0) -> A -> Option A := fun (0 A : Type 0) (a : A) => (present a : Option A)
+def optionMap : (0 A : Type 0) -> (0 B : Type 0) -> (A -> B) -> Option A -> Option B :=
+  fun (0 A : Type 0) (0 B : Type 0) (f : A -> B) (o : Option A) =>
+  match o as self in Option return Option B with | absent => none B | present a => some B (f a)
+
+def rec listFold : (0 A : Type 0) -> (0 B : Type 0) -> List A -> B -> (B -> A -> B) -> B :=
+  fun (0 A : Type 0) (0 B : Type 0) (xs : List A) (acc : B) (f : B -> A -> B) =>
+  match xs as self in List return B with
+  | nil => acc
+  | cons head tail => listFold A B tail (f acc head) f
+
+def listReverse : (0 A : Type 0) -> List A -> List A :=
+  fun (0 A : Type 0) (xs : List A) =>
+  listFold A (List A) xs (listNil A) (fun (acc : List A) (x : A) => listCons A x acc)
+
+def listMap : (0 A : Type 0) -> (0 B : Type 0) -> (A -> B) -> List A -> List B :=
+  fun (0 A : Type 0) (0 B : Type 0) (f : A -> B) (xs : List A) =>
+  listReverse B (listFold A (List B) xs (listNil B) (fun (acc : List B) (x : A) => listCons B (f x) acc))
+
+def listLength : (0 A : Type 0) -> List A -> Nat :=
+  fun (0 A : Type 0) (xs : List A) =>
+  listFold A Nat xs 0 (fun (n : Nat) (x : A) => natAdd n 1)
+
+def Text : Type 0 := List Nat
+mu Error : Type 0 :=
+| notComposable (cat : Text) (outerSrc : Text) (innerTgt : Text) : Error
+| noSuchArrow (cat : Text) (source : Text) (target : Text) : Error
+| notInShape (kind : Text) (ident : Nat) : Error
+| notInDomain (fn : Text) (arg : Text) : Error
+| notUniversal (detail : Text) : Error
+| notMonic (cat : Text) (arrow : Text) : Error
+| emptySet (fn : Text) : Error
+| notSingleton (fn : Text) (card : Nat) : Error
+| clash (left : Text) (right : Text) : Error
+| cyclic (variable : Text) (term : Text) : Error
+| irreducible (fn : Text) : Error
+| noWitness : Error
+| budget (fn : Text) (steps : Nat) : Error
+| unbound (ns : Text) (name : Text) : Error
+| illFormed (fn : Text) (why : Text) : Error
+| unsupported (fn : Text) (why : Text) : Error
+| at (chapter : Nat) (fn : Text) (inner : Error) : Error
+
+def rec errorCode : Error -> Nat := fun (e : Error) =>
+  match e as self in Error return Nat with
+  | notComposable c s t => 1 | noSuchArrow c s t => 2
+  | notInShape k n => 3 | notInDomain f a => 4
+  | notUniversal d => 5 | notMonic c a => 6
+  | emptySet f => 7 | notSingleton f n => 8
+  | clash l r => 9 | cyclic v t => 10
+  | irreducible f => 11 | noWitness => 12
+  | budget f n => 13 | unbound ns n => 14
+  | illFormed f why => 15 | unsupported f why => 16
+  | at chapter fn inner => errorCode inner
+
+mu Result (0 A : Type 0) : Type 0 :=
+| failure (error : Error) : Result A
+| success (value : A) : Result A
+def ok : (0 A : Type 0) -> A -> Result A := fun (0 A : Type 0) (a : A) => (success a : Result A)
+def err : (0 A : Type 0) -> Error -> Result A := fun (0 A : Type 0) (e : Error) => (failure e : Result A)
+def bind : (0 A : Type 0) -> (0 B : Type 0) -> Result A -> (A -> Result B) -> Result B :=
+  fun (0 A : Type 0) (0 B : Type 0) (r : Result A) (f : A -> Result B) =>
+  match r as self in Result return Result B with | failure e => err B e | success a => f a
+
+def resultMap : (0 A : Type 0) -> (0 B : Type 0) -> (A -> B) -> Result A -> Result B :=
+  fun (0 A : Type 0) (0 B : Type 0) (f : A -> B) (r : Result A) =>
+  bind A B r (fun (a : A) => ok B (f a))
+def resultHolds : Result Bool -> Bool := fun (r : Result Bool) =>
+  match r as self in Result return Bool with | failure e => false | success b => b
+def require : Bool -> Error -> Result One := fun (b : Bool) (e : Error) =>
+  case b with | 0 (u : Unit) => err One e | 1 (u : Unit) => ok One one
+
+def listAppend : (0 A : Type 0) -> List A -> List A -> List A :=
+  fun (0 A : Type 0) (xs : List A) (ys : List A) =>
+  listFold A (List A) (listReverse A xs) ys (fun (acc : List A) (x : A) => listCons A x acc)
+def listConcat : (0 A : Type 0) -> List (List A) -> List A :=
+  fun (0 A : Type 0) (xs : List (List A)) =>
+  listFold (List A) (List A) (listReverse (List A) xs) (listNil A)
+    (fun (acc : List A) (x : List A) => listAppend A x acc)
+def listFilter : (0 A : Type 0) -> (A -> Bool) -> List A -> List A :=
+  fun (0 A : Type 0) (p : A -> Bool) (xs : List A) =>
+  listReverse A (listFold A (List A) xs (listNil A) (fun (acc : List A) (x : A) =>
+    case (p x) with | 0 (u : Unit) => acc | 1 (u : Unit) => listCons A x acc))
+def listAll : (0 A : Type 0) -> (A -> Bool) -> List A -> Bool :=
+  fun (0 A : Type 0) (p : A -> Bool) (xs : List A) =>
+  listFold A Bool xs true (fun (b : Bool) (x : A) => boolAnd b (p x))
+def listAny : (0 A : Type 0) -> (A -> Bool) -> List A -> Bool :=
+  fun (0 A : Type 0) (p : A -> Bool) (xs : List A) =>
+  listFold A Bool xs false (fun (b : Bool) (x : A) => boolOr b (p x))
+def listMember : (0 A : Type 0) -> (A -> A -> Bool) -> A -> List A -> Bool :=
+  fun (0 A : Type 0) (eq : A -> A -> Bool) (x : A) (xs : List A) => listAny A (eq x) xs
+def listFind : (0 A : Type 0) -> (A -> Bool) -> Error -> List A -> Result A :=
+  fun (0 A : Type 0) (p : A -> Bool) (e : Error) (xs : List A) =>
+  listFold A (Result A) (listReverse A xs) (err A e) (fun (acc : Result A) (x : A) =>
+    case (p x) with | 0 (u : Unit) => acc | 1 (u : Unit) => ok A x)
+def listUnique : (0 A : Type 0) -> (A -> A -> Bool) -> List A -> List A :=
+  fun (0 A : Type 0) (eq : A -> A -> Bool) (xs : List A) =>
+  listReverse A (listFold A (List A) xs (listNil A) (fun (acc : List A) (x : A) =>
+    case (listMember A eq x acc) with | 0 (u : Unit) => listCons A x acc | 1 (u : Unit) => acc))
+def rec listEqual : (0 A : Type 0) -> (A -> A -> Bool) -> List A -> List A -> Bool :=
+  fun (0 A : Type 0) (eq : A -> A -> Bool) (xs : List A) (ys : List A) =>
+  match xs as self in List return Bool with
+  | nil => (match ys as other in List return Bool with | nil => true | cons h t => false)
+  | cons h t => (match ys as other in List return Bool with
+    | nil => false | cons h2 t2 => boolAnd (eq h h2) (listEqual A eq t t2))
+
+def listFoldM : (0 A : Type 0) -> (0 B : Type 0) -> List A -> B -> (B -> A -> Result B) -> Result B :=
+  fun (0 A : Type 0) (0 B : Type 0) (xs : List A) (acc : B) (f : B -> A -> Result B) =>
+  listFold A (Result B) xs (ok B acc) (fun (r : Result B) (x : A) => bind B B r (fun (b : B) => f b x))
+def listMapM : (0 A : Type 0) -> (0 B : Type 0) -> (A -> Result B) -> List A -> Result (List B) :=
+  fun (0 A : Type 0) (0 B : Type 0) (f : A -> Result B) (xs : List A) =>
+  resultMap (List B) (List B) (listReverse B)
+    (listFoldM A (List B) xs (listNil B) (fun (acc : List B) (x : A) =>
+      resultMap B (List B) (fun (b : B) => listCons B b acc) (f x)))
+
+def listIndexed : (0 A : Type 0) -> List A -> List (prod (Nat, A)) :=
+  fun (0 A : Type 0) (xs : List A) =>
+  let r : prod (Nat, List (prod (Nat, A))) :=
+    listFold A (prod (Nat, List (prod (Nat, A)))) xs (tuple (0, listNil (prod (Nat, A))))
+      (fun (acc : prod (Nat, List (prod (Nat, A)))) (x : A) =>
+        tuple (natAdd acc.0 1, listCons (prod (Nat, A)) (tuple (acc.0, x)) acc.1)) in
+  listReverse (prod (Nat, A)) r.1
+def listLookup : (0 A : Type 0) -> Nat -> List (prod (Nat, A)) -> Result A :=
+  fun (0 A : Type 0) (n : Nat) (xs : List (prod (Nat, A))) =>
+  resultMap (prod (Nat, A)) A (fun (p : prod (Nat, A)) => p.1)
+    (listFind (prod (Nat, A)) (fun (p : prod (Nat, A)) => natEq p.0 n) (notInShape (listNil Nat) n) xs)
+
+def coreProbe : Nat := listLength Nat (listCons Nat 10 (listCons Nat 20 (listNil Nat)))

@@ -1,0 +1,117 @@
+-- Recursive stage indices are structural fuel values; scalar grades are Nat.
+def Stage : Type 0 := Fuel
+def stageZero : Stage := fuelZero
+def stageSucc : Stage -> Stage := fuelSucc
+def stageNat : Stage -> Nat := fuelSize
+def stagePrefixes : Stage -> List Stage := fun (stage : Stage) =>
+  let r : prod (Stage, List Stage) := listFold One (prod (Stage, List Stage)) stage
+    (tuple (stageZero, listNil Stage)) (fun (acc : prod (Stage, List Stage)) (tick : One) =>
+      tuple (stageSucc acc.0, listCons Stage acc.0 acc.1)) in
+  listReverse Stage r.1
+def stagesThrough : Stage -> List Stage := fun (stage : Stage) =>
+  listAppend Stage (stagePrefixes stage) (listCons Stage stage (listNil Stage))
+def listTail : (0 A : Type 0) -> List A -> List A := fun (0 A : Type 0) (xs : List A) =>
+  match xs as self in List return List A with | nil => listNil A | cons x rest => rest
+def listDropStage : (0 A : Type 0) -> Stage -> List A -> List A :=
+  fun (0 A : Type 0) (stage : Stage) (xs : List A) =>
+  listFold One (List A) stage xs (fun (acc : List A) (tick : One) => listTail A acc)
+def listHead : (0 A : Type 0) -> List A -> Result A := fun (0 A : Type 0) (xs : List A) =>
+  match xs as self in List return Result A with | nil => err A (emptySet textNode) | cons x rest => ok A x
+def rec listZipWith : (0 A : Type 0) -> (0 B : Type 0) -> (0 C : Type 0) ->
+  (A -> B -> C) -> List A -> List B -> Result (List C) :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 C : Type 0) (f : A -> B -> C) (xs : List A) (ys : List B) =>
+  match xs as self in List return Result (List C) with
+  | nil => (match ys as other in List return Result (List C) with
+    | nil => ok (List C) (listNil C) | cons y rest => err (List C) (notUniversal textNotParallel))
+  | cons x rest => (match ys as other in List return Result (List C) with
+    | nil => err (List C) (notUniversal textNotParallel)
+    | cons y tail => resultMap (List C) (List C) (listCons C (f x y)) (listZipWith A B C f rest tail))
+
+mu Verdict : Type 0 :=
+| verdictFalse : Verdict
+| verdictUnknown : Verdict
+| verdictTrue : Verdict
+def verdictOfBool : Bool -> Verdict := fun (b : Bool) =>
+  case b with | 0 (u : Unit) => verdictFalse | 1 (u : Unit) => verdictTrue
+def verdictIsTrue : Verdict -> Bool := fun (v : Verdict) =>
+  match v as self in Verdict return Bool with | verdictFalse => false | verdictUnknown => false | verdictTrue => true
+def verdictIsFalse : Verdict -> Bool := fun (v : Verdict) =>
+  match v as self in Verdict return Bool with | verdictFalse => true | verdictUnknown => false | verdictTrue => false
+def verdictNeg : Verdict -> Verdict := fun (v : Verdict) =>
+  match v as self in Verdict return Verdict with | verdictFalse => verdictTrue | verdictUnknown => verdictUnknown | verdictTrue => verdictFalse
+def verdictAnd : Verdict -> Verdict -> Verdict := fun (a : Verdict) (b : Verdict) =>
+  match a as self in Verdict return Verdict with
+  | verdictFalse => verdictFalse | verdictTrue => b
+  | verdictUnknown => (match b as other in Verdict return Verdict with
+    | verdictFalse => verdictFalse | verdictUnknown => verdictUnknown | verdictTrue => verdictUnknown)
+def verdictOr : Verdict -> Verdict -> Verdict := fun (a : Verdict) (b : Verdict) =>
+  verdictNeg (verdictAnd (verdictNeg a) (verdictNeg b))
+def verdictImplies : Verdict -> Verdict -> Verdict := fun (a : Verdict) (b : Verdict) => verdictOr (verdictNeg a) b
+
+mu OmegaValue : Type 0 :=
+| omegaFinite (depth : Nat) : OmegaValue
+| omegaInfinite : OmegaValue
+def omegaBottom : OmegaValue := omegaFinite 0
+def omegaTop : OmegaValue := omegaInfinite
+def omegaLeq : OmegaValue -> OmegaValue -> Bool := fun (a : OmegaValue) (b : OmegaValue) =>
+  match a as self in OmegaValue return Bool with
+  | omegaFinite x => (match b as other in OmegaValue return Bool with
+    | omegaFinite y => boolNot (natLt y x) | omegaInfinite => true)
+  | omegaInfinite => (match b as other in OmegaValue return Bool with | omegaFinite y => false | omegaInfinite => true)
+def omegaMeet : OmegaValue -> OmegaValue -> OmegaValue := fun (a : OmegaValue) (b : OmegaValue) =>
+  case (omegaLeq a b) with | 0 (u : Unit) => b | 1 (u : Unit) => a
+def omegaJoin : OmegaValue -> OmegaValue -> OmegaValue := fun (a : OmegaValue) (b : OmegaValue) =>
+  case (omegaLeq a b) with | 0 (u : Unit) => a | 1 (u : Unit) => b
+def omegaImplies : OmegaValue -> OmegaValue -> OmegaValue := fun (a : OmegaValue) (b : OmegaValue) =>
+  case (omegaLeq a b) with | 0 (u : Unit) => b | 1 (u : Unit) => omegaTop
+def omegaNeg : OmegaValue -> OmegaValue := fun (a : OmegaValue) => omegaImplies a omegaBottom
+def omegaSucc : OmegaValue -> OmegaValue := fun (a : OmegaValue) =>
+  match a as self in OmegaValue return OmegaValue with | omegaFinite n => omegaFinite (natAdd n 1) | omegaInfinite => omegaInfinite
+def omegaIsTrue : OmegaValue -> Bool := fun (a : OmegaValue) =>
+  match a as self in OmegaValue return Bool with | omegaFinite n => false | omegaInfinite => true
+def omegaClassical : OmegaValue -> OmegaValue := fun (a : OmegaValue) =>
+  case (omegaIsTrue a) with | 0 (u : Unit) => omegaBottom | 1 (u : Unit) => omegaTop
+
+-- A lasso carries a loop head separately, making the nonempty-loop invariant
+-- structural. Streams are total functions of a structural stage index.
+mu Behavior (0 A : Type 0) : Type 0 :=
+| behaviorStream (state : Stage -> A) : Behavior A
+| behaviorLasso (stem : List A) (loopHead : A) (loopTail : List A) : Behavior A
+def stream : (0 A : Type 0) -> (Stage -> A) -> Behavior A :=
+  fun (0 A : Type 0) (state : Stage -> A) => (behaviorStream state : Behavior A)
+def lasso : (0 A : Type 0) -> List A -> A -> List A -> Behavior A :=
+  fun (0 A : Type 0) (stem : List A) (head : A) (tail : List A) => (behaviorLasso stem head tail : Behavior A)
+def behaviorHead : (0 A : Type 0) -> Behavior A -> A := fun (0 A : Type 0) (b : Behavior A) =>
+  match b as self in Behavior return A with
+  | behaviorStream state => state stageZero
+  | behaviorLasso stem head tail => (match stem as prefix in List return A with | nil => head | cons x rest => x)
+def behaviorShift : (0 A : Type 0) -> Behavior A -> Behavior A := fun (0 A : Type 0) (b : Behavior A) =>
+  match b as self in Behavior return Behavior A with
+  | behaviorStream state => stream A (fun (n : Stage) => state (stageSucc n))
+  | behaviorLasso stem head tail => (match stem as prefix in List return Behavior A with
+    | cons x rest => lasso A rest head tail
+    | nil => (match tail as loop in List return Behavior A with
+      | nil => b
+      | cons x rest => lasso A (listNil A) x (listAppend A rest (listCons A head (listNil A)))))
+def behaviorShiftBy : (0 A : Type 0) -> Behavior A -> Stage -> Behavior A :=
+  fun (0 A : Type 0) (b : Behavior A) (n : Stage) =>
+  listFold One (Behavior A) n b (fun (acc : Behavior A) (tick : One) => behaviorShift A acc)
+def behaviorNth : (0 A : Type 0) -> Behavior A -> Stage -> A :=
+  fun (0 A : Type 0) (b : Behavior A) (n : Stage) =>
+  match b as self in Behavior return A with
+  | behaviorStream state => state n
+  | behaviorLasso stem head tail => behaviorHead A (behaviorShiftBy A b n)
+
+mu Temporal (0 A : Type 0) : Type 0 :=
+| tlTrue : Temporal A
+| tlFalse : Temporal A
+| tlState (name : Text) (pred : A -> Bool) : Temporal A
+| tlAction (name : Text) (pred : A -> A -> Bool) : Temporal A
+| tlAnd (left : Temporal A) (right : Temporal A) : Temporal A
+| tlOr (left : Temporal A) (right : Temporal A) : Temporal A
+| tlNot (body : Temporal A) : Temporal A
+| tlImplies (left : Temporal A) (right : Temporal A) : Temporal A
+| tlLater (body : Temporal A) : Temporal A
+| tlNext (body : Temporal A) : Temporal A
+| tlAlways (body : Temporal A) : Temporal A
+| tlEventually (body : Temporal A) : Temporal A

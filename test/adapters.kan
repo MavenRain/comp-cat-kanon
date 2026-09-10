@@ -1,0 +1,25 @@
+def testMemoHit : Nat :=
+  let cached : Memo Nat Nat := listCons (prod (Nat, Nat)) (tuple (1, 7)) (listNil (prod (Nat, Nat))) in
+  let result : prod (Result Nat, Memo Nat Nat) := memoGet Nat Nat natEq 1 (fun (u : One) => err Nat noWitness) cached in
+  boolNat (resultHolds (resultMap Nat Bool (natEq 7) result.0))
+def testMemoFailure : Nat :=
+  let result : prod (Result Nat, Memo Nat Nat) := memoGet Nat Nat natEq 1 (fun (u : One) => err Nat noWitness) (listNil (prod (Nat, Nat))) in
+  boolNat (natEq (listLength (prod (Nat, Nat)) result.1) 0)
+def testMemoDistinctKey : Nat :=
+  let cached : Memo Nat Nat := listCons (prod (Nat, Nat)) (tuple (1, 7)) (listNil (prod (Nat, Nat))) in
+  let result : prod (Result Nat, Memo Nat Nat) := memoGet Nat Nat natEq 2 (fun (u : One) => ok Nat 9) cached in
+  boolNat (resultHolds (resultMap Nat Bool (natEq 9) result.0))
+def testTernaryCoproduct : Nat := boolNat (resultHolds (resultMap (TernaryCoproduct FinSet FinArrow) Bool
+  (fun (p : TernaryCoproduct FinSet FinArrow) => natEq (setCardinality p.0) 6)
+  (ternaryCoproduct FinSet FinArrow finSetGround tA tA tA)))
+def testRelationRejects : Nat := match (relationSpan tA (setSingleton tZero) tA) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 15) | success p => 0
+def testSplitSingleton : Nat := boolNat (resultHolds (resultMap (prod (FinSet, FinSet)) Bool
+  (fun (p : prod (FinSet, FinSet)) => setIsEmpty p.1) (setSplit (setSingleton tZero))))
+def testMalformedArrowEquality : Nat := boolNat (setArrowEqual
+  (tuple (tA, listNil (prod (Tag, Tag)), tA)) (tuple (tA, listNil (prod (Tag, Tag)), tA)))
+def testSourceRightInverse : Nat := boolNat (resultHolds
+  (bind FinArrow Bool (setInvert (setMake tA (setSingleton tZero) (fun (x : Tag) => tZero)))
+    (fun (h : FinArrow) => ok Bool (natEq (setCardinality h.0) 1))))
+def testDecimalOverflow : Nat := match (natTextChecked 10000000000000000000) as r in Result return Nat with
+  | failure e => boolNat (natEq (errorCode e) 16) | success text => 0

@@ -1,0 +1,140 @@
+-- Second primitive: structural fuel bounds the countable construction.
+def Fuel : Type 0 := List One
+def fuelZero : Fuel := listNil One
+def fuelSucc : Fuel -> Fuel := fun (fuel : Fuel) => listCons One one fuel
+def fuelSize : Fuel -> Nat := listLength One
+def CountableCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  prod (Nat, Nat -> Result O, O, Nat -> Result H, O -> (Nat -> Result H) -> Result H)
+def OmegaAcc : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) =>
+  prod (Bool, Nat, O, List (prod (Nat, O)), O, List (prod (Nat, H)), O -> (Nat -> Result H) -> Result H)
+def omegaAbsorb : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Functor O H O H ->
+  OmegaAcc O H -> Result (OmegaAcc O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : Functor O H O H) (a : OmegaAcc O H) =>
+  bind (Coproduct O H) (OmegaAcc O H) (g.2 a.4 a.2) (fun (cp : Coproduct O H) =>
+  bind (List (prod (Nat, H))) (OmegaAcc O H)
+    (listMapM (prod (Nat, H)) (prod (Nat, H)) (fun (p : prod (Nat, H)) =>
+      resultMap H (prod (Nat, H)) (fun (h : H) => tuple (p.0, h)) (g.0.4 cp.1 p.1)) a.5)
+    (fun (legs : List (prod (Nat, H))) =>
+      resultMap O (OmegaAcc O H) (fun (next : O) =>
+        tuple (false, natAdd a.1 1, next, listCons (prod (Nat, O)) (tuple (a.1, a.2)) a.3,
+          cp.0, listCons (prod (Nat, H)) (tuple (a.1, cp.2)) legs,
+          (fun (target : O) (fam : Nat -> Result H) => bind H H (a.6 target fam)
+            (fun (u : H) => bind H H (fam a.1) (fun (v : H) => cp.3 target u v))))) (f.1 a.2)))
+def iteratedCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> IsoCategory O H ->
+  Fuel -> Functor O H O H -> O -> Result (CountableCoproduct O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (iso : IsoCategory O H)
+    (fuel : Fuel) (f : Functor O H O H) (start : O) =>
+  let initial : OmegaAcc O H := tuple (false, 0, start, listNil (prod (Nat, O)), g.1.0,
+    listNil (prod (Nat, H)), (fun (target : O) (fam : Nat -> Result H) => g.1.1 target)) in
+  bind (OmegaAcc O H) (CountableCoproduct O H)
+    (listFoldM One (OmegaAcc O H) fuel initial (fun (a : OmegaAcc O H) (tick : One) =>
+      case a.0 with
+      | 1 (u : Unit) => ok (OmegaAcc O H) a
+      | 0 (u : Unit) => bind H (OmegaAcc O H) (g.1.1 a.2) (fun (h : H) =>
+        case (iso.1 h) with
+        | 0 (u : Unit) => omegaAbsorb O H g f a
+        | 1 (u : Unit) => ok (OmegaAcc O H) (tuple (true, a.1, a.2, a.3, a.4, a.5, a.6)))))
+    (fun (a : OmegaAcc O H) => case a.0 with
+      | 0 (u : Unit) => err (CountableCoproduct O H) (budget textIteratedCoproduct (fuelSize fuel))
+      | 1 (u : Unit) => ok (CountableCoproduct O H) (tuple (a.1,
+        (fun (n : Nat) => listLookup O n a.3), a.4, (fun (n : Nat) => listLookup H n a.5), a.6)))
+
+def omegaFixedPoint : (0 O : Type 0) -> (0 H : Type 0) -> IsoCategory O H -> Fuel ->
+  (Nat -> Result H) -> Nat -> Result Nat :=
+  fun (0 O : Type 0) (0 H : Type 0) (iso : IsoCategory O H) (fuel : Fuel) (chain : Nat -> Result H) (from : Nat) =>
+  bind (prod (Bool, Nat)) Nat
+    (listFoldM One (prod (Bool, Nat)) fuel (tuple (false, from)) (fun (a : prod (Bool, Nat)) (tick : One) =>
+      case a.0 with
+      | 1 (u : Unit) => ok (prod (Bool, Nat)) a
+      | 0 (u : Unit) => resultMap H (prod (Bool, Nat)) (fun (h : H) =>
+        case (iso.1 h) with | 0 (u : Unit) => tuple (false, natAdd a.1 1) | 1 (u : Unit) => tuple (true, a.1)) (chain a.1)))
+    (fun (a : prod (Bool, Nat)) => case a.0 with
+      | 0 (u : Unit) => err Nat (budget textFixedPoint (fuelSize fuel)) | 1 (u : Unit) => ok Nat a.1)
+
+def composeChain : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Fuel ->
+  (Nat -> Result H) -> Nat -> Nat -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (fuel : Fuel) (chain : Nat -> Result H) (from : Nat) (upto : Nat) =>
+  bind One H (require (boolNot (natLt (fuelSize fuel) (natSub upto from))) (budget textWColimit (fuelSize fuel)))
+    (fun (u : One) => bind H H (chain from) (fun (base : H) =>
+      resultMap (prod (Nat, H)) H (fun (p : prod (Nat, H)) => p.1)
+        (listFoldM One (prod (Nat, H)) fuel (tuple (from, c.3 (c.1 base)))
+          (fun (a : prod (Nat, H)) (tick : One) =>
+            case (natLt a.0 upto) with
+            | 0 (u : Unit) => ok (prod (Nat, H)) a
+            | 1 (u : Unit) => bind H (prod (Nat, H)) (chain a.0) (fun (h : H) =>
+              resultMap H (prod (Nat, H)) (fun (next : H) => tuple (natAdd a.0 1, next)) (c.4 h a.1))))))
+def OmegaCocone : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, Nat -> Result H, Nat -> Result H)
+def OmegaCoconeArrow : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (OmegaCocone O H, H, OmegaCocone O H)
+def OmegaColimit : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (OmegaCocone O H, OmegaCocone O H -> Result (OmegaCoconeArrow O H))
+def omegaColimit : (0 O : Type 0) -> (0 H : Type 0) -> IsoCategory O H -> Fuel -> (Nat -> Result H) -> Result (OmegaColimit O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (iso : IsoCategory O H) (fuel : Fuel) (chain : Nat -> Result H) =>
+  bind Nat (OmegaColimit O H) (omegaFixedPoint O H iso fuel chain 0) (fun (n : Nat) =>
+  resultMap H (OmegaColimit O H) (fun (atN : H) =>
+    let cone : OmegaCocone O H := tuple (iso.0.1 atN, chain, (fun (k : Nat) =>
+      case (natLt n k) with
+      | 0 (u : Unit) => composeChain O H iso.0 fuel chain k n
+      | 1 (u : Unit) => bind H H (composeChain O H iso.0 fuel chain n k) iso.2)) in
+    tuple (cone, (fun (competing : OmegaCocone O H) => resultMap H (OmegaCoconeArrow O H)
+      (fun (h : H) => tuple (cone, h, competing)) (competing.2 n)))) (chain n))
+
+def Algebra : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H)
+def FreeAlgebra : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Algebra O H, H, Algebra O H -> H -> Result H)
+def freeAlgebra : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> IsoCategory O H ->
+  Fuel -> Functor O H O H -> O -> Result (FreeAlgebra O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (iso : IsoCategory O H)
+    (fuel : Fuel) (f : Functor O H O H) (a : O) =>
+  bind (CountableCoproduct O H) (FreeAlgebra O H) (iteratedCoproduct O H g iso fuel f a) (fun (first : CountableCoproduct O H) =>
+  bind O (FreeAlgebra O H) (f.1 a) (fun (fa : O) =>
+  bind (CountableCoproduct O H) (FreeAlgebra O H) (iteratedCoproduct O H g iso fuel f fa) (fun (second : CountableCoproduct O H) =>
+  bind H (FreeAlgebra O H) (second.4 first.2 (fun (n : Nat) => first.3 (natAdd n 1))) (fun (structure : H) =>
+  resultMap H (FreeAlgebra O H) (fun (inj0 : H) =>
+    tuple (tuple (first.2, structure), inj0, (fun (target : Algebra O H) (map : H) =>
+      bind (prod (Nat, List (prod (Nat, H)))) H
+        (listFoldM One (prod (Nat, List (prod (Nat, H)))) fuel
+          (tuple (0, listNil (prod (Nat, H)))) (fun (acc : prod (Nat, List (prod (Nat, H)))) (tick : One) =>
+            case (natLt acc.0 first.0) with
+            | 0 (u : Unit) => ok (prod (Nat, List (prod (Nat, H)))) acc
+            | 1 (u : Unit) =>
+              let next : Result H := (case (natEq acc.0 0) with
+                | 1 (u : Unit) => ok H map
+                | 0 (u : Unit) => bind H H (listLookup H (natSub acc.0 1) acc.1)
+                  (fun (previous : H) => bind H H (f.2 previous) (fun (fp : H) => g.0.4 target.1 fp))) in
+              resultMap H (prod (Nat, List (prod (Nat, H)))) (fun (h : H) =>
+                tuple (natAdd acc.0 1, listCons (prod (Nat, H)) (tuple (acc.0, h)) acc.1)) next))
+        (fun (acc : prod (Nat, List (prod (Nat, H)))) => first.4 target.0 (fun (n : Nat) => listLookup H n acc.1))))) (first.3 0)))))
+
+def omegaSpanPushout : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (left : H) (right : H) =>
+  bind (Coproduct O H) (prod (H, H)) (g.2 (g.0.2 left) (g.0.2 right)) (fun (cp : Coproduct O H) =>
+  bind H (prod (H, H)) (g.0.4 cp.1 left) (fun (l : H) =>
+  bind H (prod (H, H)) (g.0.4 cp.2 right) (fun (r : H) =>
+  bind (Coequalizer O H) (prod (H, H)) (g.3 l r) (fun (ce : Coequalizer O H) =>
+  bind H (prod (H, H)) (g.0.4 ce.1 cp.1) (fun (p : H) =>
+    resultMap H (prod (H, H)) (fun (q : H) => tuple (p, q)) (g.0.4 ce.1 cp.2))))))
+def omegaFixpoint : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> IsoCategory O H ->
+  Fuel -> Functor O H O H -> O -> Result O :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (iso : IsoCategory O H)
+    (fuel : Fuel) (f : Functor O H O H) (a : O) =>
+  bind O O (f.1 a) (fun (fa : O) =>
+  bind H O (g.1.1 a) (fun (f0 : H) =>
+  bind H O (g.1.1 fa) (fun (g0 : H) =>
+  bind (sum (prod (H, H), O)) O
+    (listFoldM One (sum (prod (H, H), O)) fuel (inj 0 of 2 (tuple (f0, g0)))
+      (fun (state : sum (prod (H, H), O)) (tick : One) => case state with
+        | 1 (answer : O) => ok (sum (prod (H, H), O)) (inj 1 of 2 answer)
+        | 0 (pair : prod (H, H)) =>
+          bind (prod (H, H)) (sum (prod (H, H), O)) (omegaSpanPushout O H g pair.1 pair.0)
+            (fun (next : prod (H, H)) => case (iso.1 next.0) with
+              | 1 (u : Unit) => ok (sum (prod (H, H), O)) (inj 1 of 2 (g.0.1 pair.0))
+              | 0 (u : Unit) => resultMap H (sum (prod (H, H), O))
+                (fun (h : H) => inj 0 of 2 (tuple (h, next.1))) (f.2 next.0))))
+    (fun (state : sum (prod (H, H), O)) => case state with
+      | 0 (pair : prod (H, H)) => err O (budget textFixedPoint (fuelSize fuel))
+      | 1 (answer : O) => ok O answer))))

@@ -1,0 +1,65 @@
+def TreeObject : (0 A : Type 0) -> Type 0 := fun (0 A : Type 0) => prod (Stage -> List A, Stage -> A -> A)
+def TreeHom : (0 A : Type 0) -> (0 B : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 B : Type 0) => prod (TreeObject A, TreeObject B, Stage -> A -> B)
+def treeIdentity : (0 A : Type 0) -> TreeObject A -> TreeHom A A :=
+  fun (0 A : Type 0) (o : TreeObject A) => tuple (o, o, (fun (n : Stage) (x : A) => x))
+def treeCompose : (0 A : Type 0) -> (0 B : Type 0) -> (0 C : Type 0) -> TreeHom B C -> TreeHom A B -> Result (TreeHom A C) :=
+  fun (0 A : Type 0) (0 B : Type 0) (0 C : Type 0) (g : TreeHom B C) (f : TreeHom A B) =>
+  ok (TreeHom A C) (tuple (f.0, g.1, (fun (n : Stage) (x : A) => g.2 n (f.2 n x))))
+def treeCommutes : (0 A : Type 0) -> (0 B : Type 0) -> (B -> B -> Bool) -> Stage -> TreeHom A B -> Bool :=
+  fun (0 A : Type 0) (0 B : Type 0) (eq : B -> B -> Bool) (upto : Stage) (h : TreeHom A B) =>
+  listAll Stage (fun (n : Stage) => listAll A (fun (x : A) =>
+    eq (h.1.1 n (h.2 (stageSucc n) x)) (h.2 n (h.0.1 n x))) (h.0.0 (stageSucc n))) (stagePrefixes upto)
+def treeTerminal : TreeObject One := tuple ((fun (n : Stage) => listCons One one (listNil One)),
+  (fun (n : Stage) (x : One) => one))
+def treeOmega : TreeObject OmegaValue := tuple (
+  (fun (n : Stage) => listMap Stage OmegaValue (fun (k : Stage) => omegaFinite (stageNat k)) (stagesThrough n)),
+  (fun (n : Stage) (v : OmegaValue) => match v as self in OmegaValue return OmegaValue with
+    | omegaFinite k => omegaFinite (natPick (natLt k (stageNat n)) k (stageNat n))
+    | omegaInfinite => omegaFinite (stageNat n)))
+def treeTruth : TreeHom One OmegaValue := tuple (treeTerminal, treeOmega, (fun (n : Stage) (x : One) => omegaFinite (stageNat n)))
+def TreeSubobject : (0 A : Type 0) -> Type 0 := fun (0 A : Type 0) => prod (TreeObject A, Stage -> A -> Bool)
+def treeRestrict : (0 A : Type 0) -> TreeObject A -> Stage -> A -> Stage -> A :=
+  fun (0 A : Type 0) (carrier : TreeObject A) (from : Stage) (x : A) (upto : Stage) =>
+  listFold Stage A (listReverse Stage (stagePrefixes from)) x (fun (acc : A) (stage : Stage) =>
+    case (natLt (stageNat stage) (stageNat upto)) with | 0 (u : Unit) => carrier.1 stage acc | 1 (u : Unit) => acc)
+def treeCharacter : (0 A : Type 0) -> TreeSubobject A -> Result (TreeHom A OmegaValue) :=
+  fun (0 A : Type 0) (s : TreeSubobject A) =>
+  ok (TreeHom A OmegaValue) (tuple (s.0, treeOmega, (fun (n : Stage) (x : A) =>
+    let answer : prod (Bool, Nat) := listFold Stage (prod (Bool, Nat)) (stagesThrough n)
+      (tuple (false, stageNat n)) (fun (acc : prod (Bool, Nat)) (j : Stage) =>
+        case acc.0 with | 1 (u : Unit) => acc
+        | 0 (u : Unit) => (case (s.1 j (treeRestrict A s.0 n x j)) with
+          | 0 (u : Unit) => tuple (true, stageNat j) | 1 (u : Unit) => acc)) in
+    omegaFinite answer.1)))
+def treeMeet : (0 A : Type 0) -> TreeSubobject A -> TreeSubobject A -> TreeSubobject A :=
+  fun (0 A : Type 0) (a : TreeSubobject A) (b : TreeSubobject A) =>
+  tuple (a.0, (fun (n : Stage) (x : A) => boolAnd (a.1 n x) (b.1 n x)))
+def treeJoin : (0 A : Type 0) -> TreeSubobject A -> TreeSubobject A -> TreeSubobject A :=
+  fun (0 A : Type 0) (a : TreeSubobject A) (b : TreeSubobject A) =>
+  tuple (a.0, (fun (n : Stage) (x : A) => boolOr (a.1 n x) (b.1 n x)))
+def treeImplies : (0 A : Type 0) -> TreeSubobject A -> TreeSubobject A -> TreeSubobject A :=
+  fun (0 A : Type 0) (a : TreeSubobject A) (b : TreeSubobject A) =>
+  tuple (a.0, (fun (n : Stage) (x : A) => listAll Stage (fun (j : Stage) =>
+    let restricted : A := treeRestrict A a.0 n x j in
+    boolOr (boolNot (a.1 j restricted)) (b.1 j restricted)) (stagesThrough n)))
+def treeNeg : (0 A : Type 0) -> TreeSubobject A -> TreeSubobject A :=
+  fun (0 A : Type 0) (a : TreeSubobject A) => treeImplies A a (tuple (a.0, (fun (n : Stage) (x : A) => false)))
+def treeLater : (0 A : Type 0) -> TreeObject A -> TreeObject (Option A) :=
+  fun (0 A : Type 0) (o : TreeObject A) => tuple (
+    (fun (n : Stage) => match n as self in List return List (Option A) with
+      | nil => listCons (Option A) (none A) (listNil (Option A))
+      | cons tick previous => listMap A (Option A) (some A) (o.0 previous)),
+    (fun (n : Stage) (v : Option A) => match n as self in List return Option A with
+      | nil => none A | cons tick previous => optionMap A A (o.1 previous) v))
+def treeNext : (0 A : Type 0) -> TreeObject A -> TreeHom A (Option A) :=
+  fun (0 A : Type 0) (o : TreeObject A) => tuple (o, treeLater A o,
+    (fun (n : Stage) (x : A) => match n as self in List return Option A with
+      | nil => none A | cons tick previous => some A (o.1 previous x)))
+def treeLaterFix : (0 A : Type 0) -> TreeObject A -> (TreeSubobject A -> TreeSubobject A) -> Bool -> Result (TreeSubobject A) :=
+  fun (0 A : Type 0) (carrier : TreeObject A) (step : TreeSubobject A -> TreeSubobject A) (guarded : Bool) =>
+  bind One (TreeSubobject A) (require guarded (notUniversal textLaterGuard)) (fun (u : One) =>
+    ok (TreeSubobject A) (tuple (carrier, (fun (n : Stage) (x : A) =>
+      (listFold Stage (TreeSubobject A) (stagesThrough n)
+        (tuple (carrier, (fun (k : Stage) (y : A) => false)))
+        (fun (s : TreeSubobject A) (tick : Stage) => step s)).1 n x))))

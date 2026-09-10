@@ -1,0 +1,86 @@
+def Exponential : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H, O -> H -> Result H)
+def Exponentials : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => O -> O -> Result (Exponential O H)
+def PullbackSquare : (0 H : Type 0) -> Type 0 :=
+  fun (0 H : Type 0) => prod (H, H, H, H, H -> H -> Result H)
+def Classifier : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (O, H, H -> Result (PullbackSquare H))
+def Topos : (0 O : Type 0) -> (0 H : Type 0) -> Type 0 :=
+  fun (0 O : Type 0) (0 H : Type 0) => prod (Text, Exponentials O H, Classifier O H)
+def binaryUniversal : (0 O : Type 0) -> (0 H : Type 0) -> Colimiting O H -> Result (Coproduct O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (p : Colimiting O H) =>
+  bind H (Coproduct O H) (p.1 0) (fun (left : H) => resultMap H (Coproduct O H)
+    (fun (right : H) => tuple (p.0, left, right,
+      (fun (a : O) (f : H) (g : H) => p.2 a (fun (n : Nat) =>
+        case (natEq n 0) with | 0 (u : Unit) => ok H g | 1 (u : Unit) => ok H f)))) (p.1 1))
+def kanProduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> Result (Coproduct O H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (a : O) (b : O) =>
+  bind (Colimiting O H) (Coproduct O H) (derivedProduct O H d a b) (binaryUniversal O H)
+def productFunctor : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> Functor O H O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (a : O) =>
+  let c : Category O H := opposite O H d.0 in
+  tuple (textUniversal, (fun (b : O) => resultMap (Coproduct O H) O (fun (p : Coproduct O H) => p.0) (kanProduct O H d a b)),
+    (fun (h : H) => bind (Coproduct O H) H (kanProduct O H d a (c.1 h)) (fun (p : Coproduct O H) =>
+      bind (Coproduct O H) H (kanProduct O H d a (c.2 h)) (fun (q : Coproduct O H) =>
+        bind H H (c.4 h p.2) (fun (r : H) => q.3 p.0 p.1 r)))))
+def exponentialFunctor : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Exponentials O H -> O -> Functor O H O H :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (e : Exponentials O H) (a : O) =>
+  tuple (textUniversal, (fun (b : O) => resultMap (Exponential O H) O (fun (x : Exponential O H) => x.0) (e a b)),
+    (fun (h : H) => bind (Exponential O H) H (e a (c.1 h)) (fun (x : Exponential O H) =>
+      bind (Exponential O H) H (e a (c.2 h)) (fun (y : Exponential O H) => bind H H (c.4 h x.1) (y.2 x.0)))))
+def character : (0 O : Type 0) -> (0 H : Type 0) -> Classifier O H -> H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (sc : Classifier O H) (m : H) =>
+  resultMap (PullbackSquare H) H (fun (s : PullbackSquare H) => s.1) (sc.2 m)
+def trueOn : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Classifier O H -> O -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (sc : Classifier O H) (a : O) =>
+  bind (Colimiting O H) H (derivedTerminal O H d) (fun (t : Colimiting O H) =>
+    bind H H (t.2 a (fun (n : Nat) => err H (notInShape textUniversal n))) (fun (bang : H) => d.0.4 bang sc.1))
+def falseOnOne : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Grounding O H -> Classifier O H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Grounding O H) (sc : Classifier O H) =>
+  bind (Colimiting O H) H (derivedInitial O H g) (fun (z : Colimiting O H) =>
+    bind (Colimiting O H) H (derivedTerminal O H d) (fun (t : Colimiting O H) =>
+      bind H H (t.2 z.0 (fun (n : Nat) => err H (notInShape textUniversal n))) (character O H sc)))
+def logicNot : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Grounding O H -> Classifier O H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Grounding O H) (sc : Classifier O H) =>
+  bind H H (falseOnOne O H g d sc) (character O H sc)
+def logicAnd : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Classifier O H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (sc : Classifier O H) =>
+  bind (Colimiting O H) H (derivedTerminal O H d) (fun (t : Colimiting O H) =>
+  bind (Coproduct O H) H (kanProduct O H d sc.0 sc.0) (fun (p : Coproduct O H) =>
+    bind H H (p.3 t.0 sc.1 sc.1) (character O H sc)))
+def logicOr : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Grounding O H -> Classifier O H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (d : Grounding O H) (sc : Classifier O H) =>
+  bind H H (trueOn O H d sc sc.0) (fun (t : H) =>
+  bind (Coproduct O H) H (kanProduct O H d sc.0 sc.0) (fun (p : Coproduct O H) =>
+  bind H H (p.3 sc.0 (g.0.3 sc.0) t) (fun (left : H) =>
+  bind H H (p.3 sc.0 t (g.0.3 sc.0)) (fun (right : H) =>
+  bind (Colimiting O H) H (derivedCoproduct O H g sc.0 sc.0) (fun (cp : Colimiting O H) =>
+  bind (Coproduct O H) H (binaryUniversal O H cp) (fun (q : Coproduct O H) =>
+  bind H H (q.3 p.0 left right) (fun (union : H) =>
+  bind (prod (H, H)) H (factorize O H g d union) (fun (image : prod (H, H)) => character O H sc image.1))))))))
+def logicImply : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Classifier O H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (sc : Classifier O H) =>
+  bind H H (logicAnd O H d sc) (fun (conj : H) =>
+  bind (Coproduct O H) H (kanProduct O H d sc.0 sc.0) (fun (p : Coproduct O H) =>
+  bind (Colimiting O H) H (derivedEqualizer O H d conj p.1) (fun (e : Colimiting O H) =>
+    bind H H (e.1 0) (character O H sc))))
+def nameArrow : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Exponentials O H -> H -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (ex : Exponentials O H) (f : H) =>
+  let c : Category O H := opposite O H d.0 in
+  bind (Colimiting O H) H (derivedTerminal O H d) (fun (t : Colimiting O H) =>
+  bind (Coproduct O H) H (kanProduct O H d t.0 (c.1 f)) (fun (p : Coproduct O H) =>
+  bind (Exponential O H) H (ex (c.1 f) (c.2 f)) (fun (e : Exponential O H) =>
+    bind H H (c.4 f p.2) (e.2 t.0))))
+def logicForall : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Exponentials O H -> Classifier O H -> O -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (d : Grounding O H) (ex : Exponentials O H) (sc : Classifier O H) (a : O) =>
+  bind H H (trueOn O H d sc a) (fun (t : H) => bind H H (nameArrow O H d ex t) (character O H sc))
+def squareCommutes : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> PullbackSquare H -> Result Bool :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (s : PullbackSquare H) =>
+  bind H Bool (c.4 s.0 s.2) (fun (left : H) => resultMap H Bool (c.6 left) (c.4 s.1 s.3))
+-- These three operations are explicit unsupported witnesses in the source too.
+def powerObject : (0 O : Type 0) -> O -> Result O :=
+  fun (0 O : Type 0) (a : O) => err O (unsupported textUniversal textUniversal)
+def logicExists : (0 O : Type 0) -> (0 H : Type 0) -> O -> Result H :=
+  fun (0 O : Type 0) (0 H : Type 0) (a : O) => err H (unsupported textUniversal textUniversal)
+def omegaViaRan : (0 O : Type 0) -> Result O := fun (0 O : Type 0) => err O (unsupported textUniversal textUniversal)

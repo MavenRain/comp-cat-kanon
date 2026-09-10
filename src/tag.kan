@@ -1,0 +1,96 @@
+-- Signed integers use a nonnegative magnitude or -(magnitude + 1).
+def Int : Type 0 := sum (Nat, Nat)
+def intNat : Nat -> Int := fun (n : Nat) => inj 0 of 2 n
+def intNegative : Nat -> Int := fun (n : Nat) => inj 1 of 2 n
+def intEqual : Int -> Int -> Bool := fun (a : Int) (b : Int) =>
+  case a with
+  | 0 (n : Nat) => (case b with | 0 (m : Nat) => natEq n m | 1 (m : Nat) => false)
+  | 1 (n : Nat) => (case b with | 0 (m : Nat) => false | 1 (m : Nat) => natEq n m)
+
+mutual
+mu Tag : Type 0 :=
+| tagJust (value : Int) : Tag
+| tagWord (value : Text) : Tag
+| tagPink (value : Tag) : Tag
+| tagBlue (value : Tag) : Tag
+| tagPair (left : Tag) (right : Tag) : Tag
+| tagTrue : Tag
+| tagFalse : Tag
+| tagTuple (graph : TagGraph) : Tag
+mu TagGraph : Type 0 :=
+| tagGraphNil : TagGraph
+| tagGraphCons (key : Tag) (value : Tag) (rest : TagGraph) : TagGraph
+end
+
+def rec tagEqual : Tag -> Tag -> Bool := fun (a : Tag) (b : Tag) =>
+  match a as self in Tag return Bool with
+  | tagJust x => (match b as other in Tag return Bool with
+    | tagJust y => intEqual x y | tagWord y => false | tagPink y => false | tagBlue y => false
+    | tagPair y z => false | tagTrue => false | tagFalse => false | tagTuple g => false)
+  | tagWord x => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => listEqual Nat natEq x y | tagPink y => false | tagBlue y => false
+    | tagPair y z => false | tagTrue => false | tagFalse => false | tagTuple g => false)
+  | tagPink x => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => false | tagPink y => tagEqual x y | tagBlue y => false
+    | tagPair y z => false | tagTrue => false | tagFalse => false | tagTuple g => false)
+  | tagBlue x => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => false | tagPink y => false | tagBlue y => tagEqual x y
+    | tagPair y z => false | tagTrue => false | tagFalse => false | tagTuple g => false)
+  | tagPair x y => (match b as other in Tag return Bool with
+    | tagJust z => false | tagWord z => false | tagPink z => false | tagBlue z => false
+    | tagPair z w => boolAnd (tagEqual x z) (tagEqual y w) | tagTrue => false | tagFalse => false | tagTuple g => false)
+  | tagTrue => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => false | tagPink y => false | tagBlue y => false
+    | tagPair y z => false | tagTrue => true | tagFalse => false | tagTuple g => false)
+  | tagFalse => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => false | tagPink y => false | tagBlue y => false
+    | tagPair y z => false | tagTrue => false | tagFalse => true | tagTuple g => false)
+  | tagTuple x => (match b as other in Tag return Bool with
+    | tagJust y => false | tagWord y => false | tagPink y => false | tagBlue y => false
+    | tagPair y z => false | tagTrue => false | tagFalse => false | tagTuple g => tagGraphEqual x g)
+and tagGraphEqual : TagGraph -> TagGraph -> Bool := fun (a : TagGraph) (b : TagGraph) =>
+  match a as self in TagGraph return Bool with
+  | tagGraphNil => (match b as other in TagGraph return Bool with | tagGraphNil => true | tagGraphCons k v t => false)
+  | tagGraphCons k v t => (match b as other in TagGraph return Bool with
+    | tagGraphNil => false
+    | tagGraphCons k2 v2 t2 => boolAnd (tagEqual k k2) (boolAnd (tagEqual v v2) (tagGraphEqual t t2)))
+
+def tagSplit : Tag -> Result (prod (Bool, Tag)) := fun (x : Tag) =>
+  match x as self in Tag return Result (prod (Bool, Tag)) with
+  | tagJust v => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagWord v => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagPink v => ok (prod (Bool, Tag)) (tuple (false, v))
+  | tagBlue v => ok (prod (Bool, Tag)) (tuple (true, v))
+  | tagPair l r => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagTrue => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagFalse => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagTuple g => err (prod (Bool, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+def tagUnpair : Tag -> Result (prod (Tag, Tag)) := fun (x : Tag) =>
+  match x as self in Tag return Result (prod (Tag, Tag)) with
+  | tagJust v => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagWord v => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagPink v => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagBlue v => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagPair l r => ok (prod (Tag, Tag)) (tuple (l, r))
+  | tagTrue => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagFalse => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+  | tagTuple g => err (prod (Tag, Tag)) (notInDomain (listNil Nat) (listNil Nat))
+
+def rec tagText : Tag -> Text := fun (x : Tag) =>
+  match x as self in Tag return Text with
+  | tagJust n => (case n with | 0 (v : Nat) => natText v | 1 (v : Nat) => textAppend textMinus (natText (natAdd v 1)))
+  | tagWord value => value
+  | tagPink value => textAppend textPink (textAppend (tagText value) textCloseParen)
+  | tagBlue value => textAppend textBlue (textAppend (tagText value) textCloseParen)
+  | tagPair left right => textAppend textPair (textAppend (tagText left) (textAppend textComma (textAppend (tagText right) textCloseParen)))
+  | tagTrue => textTrue
+  | tagFalse => textFalse
+  | tagTuple graph => textAppend textTuple (textAppend (tagGraphText graph) textCloseGraph)
+and tagGraphText : TagGraph -> Text := fun (graph : TagGraph) =>
+  match graph as self in TagGraph return Text with
+  | tagGraphNil => listNil Nat
+  | tagGraphCons key value rest =>
+    textAppend (tagText key) (textAppend textMapsTo (textAppend (tagText value)
+      (match rest as tail in TagGraph return Text with
+      | tagGraphNil => listNil Nat
+      | tagGraphCons k v t => textAppend textSemi (tagGraphText rest))))

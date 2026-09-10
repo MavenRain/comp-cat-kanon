@@ -1,0 +1,81 @@
+def CommaObj : (0 A : Type 0) -> (0 M : Type 0) -> (0 B : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 M : Type 0) (0 B : Type 0) => prod (A, M, B)
+def CommaHom : (0 A : Type 0) -> (0 H : Type 0) -> (0 M : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 M : Type 0) (0 B : Type 0) (0 K : Type 0) =>
+  prod (CommaObj A M B, H, K, CommaObj A M B)
+def commaCategory : (0 A : Type 0) -> (0 H : Type 0) -> (0 M : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  Category A H -> Category B K -> (M -> M -> Bool) -> (M -> Text) -> Text ->
+  Category (CommaObj A M B) (CommaHom A H M B K) :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 M : Type 0) (0 B : Type 0) (0 K : Type 0)
+    (a : Category A H) (b : Category B K) (equalMid : M -> M -> Bool) (showMid : M -> Text) (name : Text) =>
+  let Obj : Type 0 := CommaObj A M B in
+  let Hom : Type 0 := CommaHom A H M B K in
+  let equalObj : Obj -> Obj -> Bool := fun (x : Obj) (y : Obj) =>
+    boolAnd (a.5 x.0 y.0) (boolAnd (equalMid x.1 y.1) (b.5 x.2 y.2)) in
+  let showObj : Obj -> Text := fun (x : Obj) =>
+    textAppend textOpenParen (textAppend (a.7 x.0) (textAppend textComma
+      (textAppend (showMid x.1) (textAppend textComma (textAppend (b.7 x.2) textCloseParen))))) in
+  tuple (name, (fun (h : Hom) => h.0), (fun (h : Hom) => h.3),
+    (fun (x : Obj) => tuple (x, a.3 x.0, b.3 x.2, x)),
+    (fun (g : Hom) (f : Hom) => case (equalObj g.0 f.3) with
+      | 0 (u : Unit) => err Hom (notComposable name (showObj g.0) (showObj f.3))
+      | 1 (u : Unit) => bind H Hom (a.4 g.1 f.1) (fun (ha : H) =>
+        resultMap K Hom (fun (hb : K) => tuple (f.0, ha, hb, g.3)) (b.4 g.2 f.2))),
+    equalObj, (fun (g : Hom) (f : Hom) => boolAnd (boolAnd (equalObj g.0 f.0) (equalObj g.3 f.3))
+      (boolAnd (a.6 g.1 f.1) (b.6 g.2 f.2))), showObj,
+    (fun (h : Hom) => textAppend (showObj h.0) (textAppend textArrow (showObj h.3))))
+def CommaInput : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  (0 C : Type 0) -> (0 M : Type 0) -> Type 0 :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) (0 C : Type 0) (0 M : Type 0) =>
+  prod (Grounding A H, Grounding B K, Category C M, Functor A H C M, Functor B K C M,
+    C -> Result M, A -> A -> Result (prod (One, C -> M -> M -> Result M)), H -> H -> Result (prod (One, C -> M -> Result M)), M, Text)
+def commaCommutes : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  (0 C : Type 0) -> (0 M : Type 0) -> CommaInput A H B K C M -> CommaHom A H M B K -> Result Bool :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) (0 C : Type 0) (0 M : Type 0)
+    (input : CommaInput A H B K C M) (h : CommaHom A H M B K) =>
+  bind M Bool (input.4.2 h.2) (fun (rk : M) =>
+  bind M Bool (input.3.2 h.1) (fun (lh : M) =>
+  bind M Bool (input.2.4 rk h.0.1) (fun (left : M) =>
+    resultMap M Bool (input.2.6 left) (input.2.4 h.3.1 lh))))
+def commaGround : (0 A : Type 0) -> (0 H : Type 0) -> (0 B : Type 0) -> (0 K : Type 0) ->
+  (0 C : Type 0) -> (0 M : Type 0) -> CommaInput A H B K C M ->
+  Grounding (CommaObj A M B) (CommaHom A H M B K) :=
+  fun (0 A : Type 0) (0 H : Type 0) (0 B : Type 0) (0 K : Type 0) (0 C : Type 0) (0 M : Type 0)
+    (input : CommaInput A H B K C M) =>
+  let Obj : Type 0 := CommaObj A M B in
+  let Hom : Type 0 := CommaHom A H M B K in
+  let a : Grounding A H := input.0 in
+  let b : Grounding B K := input.1 in
+  let c : Category C M := input.2 in
+  let zero : Obj := tuple (a.1.0, input.8, b.1.0) in
+  let initial : Initial Obj Hom := tuple (zero, (fun (target : Obj) =>
+    bind H Hom (a.1.1 target.0) (fun (ha : H) => resultMap K Hom (fun (hb : K) => tuple (zero, ha, hb, target)) (b.1.1 target.2)))) in
+  let coproduct : Obj -> Obj -> Result (Coproduct Obj Hom) := fun (x : Obj) (y : Obj) =>
+    bind (Coproduct A H) (Coproduct Obj Hom) (a.2 x.0 y.0) (fun (ca : Coproduct A H) =>
+    bind (Coproduct B K) (Coproduct Obj Hom) (b.2 x.2 y.2) (fun (cb : Coproduct B K) =>
+    bind (prod (One, C -> M -> M -> Result M)) (Coproduct Obj Hom) (input.6 x.0 y.0) (fun (copair : prod (One, C -> M -> M -> Result M)) =>
+    bind C (Coproduct Obj Hom) (input.4.1 cb.0) (fun (rb : C) =>
+    bind M (Coproduct Obj Hom) (input.4.2 cb.1) (fun (ri1 : M) =>
+    bind M (Coproduct Obj Hom) (input.4.2 cb.2) (fun (ri2 : M) =>
+    bind M (Coproduct Obj Hom) (c.4 ri1 x.1) (fun (g1 : M) =>
+    bind M (Coproduct Obj Hom) (c.4 ri2 y.1) (fun (g2 : M) =>
+    resultMap M (Coproduct Obj Hom) (fun (middle : M) =>
+      let apex : Obj := tuple (ca.0, middle, cb.0) in
+      tuple (apex, tuple (x, ca.1, cb.1, apex), tuple (y, ca.2, cb.2, apex),
+        (fun (target : Obj) (u : Hom) (v : Hom) =>
+          bind H Hom (ca.3 target.0 u.1 v.1) (fun (ha : H) =>
+            resultMap K Hom (fun (hb : K) => tuple (apex, ha, hb, target)) (cb.3 target.2 u.2 v.2)))))
+      (copair.1 rb g1 g2))))))))) in
+  let coequalizer : Hom -> Hom -> Result (Coequalizer Obj Hom) := fun (h1 : Hom) (h2 : Hom) =>
+    bind (Coequalizer A H) (Coequalizer Obj Hom) (a.3 h1.1 h2.1) (fun (ca : Coequalizer A H) =>
+    bind (Coequalizer B K) (Coequalizer Obj Hom) (b.3 h1.2 h2.2) (fun (cb : Coequalizer B K) =>
+    bind (prod (One, C -> M -> Result M)) (Coequalizer Obj Hom) (input.7 h1.1 h2.1) (fun (coeq : prod (One, C -> M -> Result M)) =>
+    bind C (Coequalizer Obj Hom) (input.4.1 cb.0) (fun (rcb : C) =>
+    bind M (Coequalizer Obj Hom) (input.4.2 cb.1) (fun (rqb : M) =>
+    bind M (Coequalizer Obj Hom) (c.4 rqb h1.3.1) (fun (map : M) =>
+    resultMap M (Coequalizer Obj Hom) (fun (middle : M) =>
+      let apex : Obj := tuple (ca.0, middle, cb.0) in
+      tuple (apex, tuple (h1.3, ca.1, cb.1, apex),
+        (fun (target : Obj) (q : Hom) => bind H Hom (ca.2 target.0 q.1) (fun (ha : H) =>
+          resultMap K Hom (fun (hb : K) => tuple (apex, ha, hb, target)) (cb.2 target.2 q.2))))) (coeq.1 rcb map))))))) in
+  tuple (commaCategory A H M B K a.0 b.0 c.6 c.8 input.9, initial, coproduct, coequalizer)

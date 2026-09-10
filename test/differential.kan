@@ -1,0 +1,19 @@
+def diffSet : Nat -> FinSet := fun (n : Nat) => listMap Nat Tag (fun (x : Nat) => tagJust (intNat x))
+  (listFilter Nat (fun (x : Nat) => natLt x n) (listCons Nat 0 (listCons Nat 1 (listCons Nat 2 (listNil Nat)))))
+def diffHom : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) => listLength FinArrow (setHom (diffSet n) (diffSet m))
+def diffCoproduct : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) =>
+  match (setCoproduct (diffSet n) (diffSet m)) as r in Result return Nat with | failure e => 999 | success cp => setCardinality cp.0
+def diffProduct : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) =>
+  match (setProduct (diffSet n) (diffSet m)) as r in Result return Nat with | failure e => 999 | success cp => setCardinality cp.0
+def diffFunctionSpace : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) => setCardinality (functionSpace (diffSet n) (diffSet m))
+def diffOmega : Nat -> OmegaValue := fun (n : Nat) => case (natEq n 5) with
+  | 0 (u : Unit) => omegaFinite n | 1 (u : Unit) => omegaInfinite
+def diffDepth : OmegaValue -> Nat := fun (v : OmegaValue) => match v as self in OmegaValue return Nat with
+  | omegaFinite n => n | omegaInfinite => 100
+def diffOmegaNeg : Nat -> Nat := fun (n : Nat) => diffDepth (omegaNeg (diffOmega n))
+def diffOmegaSucc : Nat -> Nat := fun (n : Nat) => diffDepth (omegaSucc (diffOmega n))
+def diffOmegaMeet : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) => diffDepth (omegaMeet (diffOmega n) (diffOmega m))
+def diffOmegaJoin : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) => diffDepth (omegaJoin (diffOmega n) (diffOmega m))
+def diffOmegaImp : Nat -> Nat -> Nat := fun (n : Nat) (m : Nat) => diffDepth (omegaImplies (diffOmega n) (diffOmega m))
+def diffP : Temporal Nat := temporalState Nat (listCons Nat 112 (listNil Nat)) (natEq 1)
+def diffQ : Temporal Nat := temporalState Nat (listCons Nat 113 (listNil Nat)) (natEq 0)

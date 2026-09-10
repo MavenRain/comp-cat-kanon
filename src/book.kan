@@ -1,0 +1,56 @@
+def setIsEmpty : FinSet -> Bool := fun (s : FinSet) => natEq (setCardinality s) 0
+def setRemove : Tag -> FinSet -> FinSet := fun (x : Tag) (s : FinSet) => listFilter Tag (fun (y : Tag) => boolNot (tagEqual x y)) s
+def singletonSplit : FinSet -> Result (prod (Tag, FinSet)) := fun (s : FinSet) =>
+  match s as self in List return Result (prod (Tag, FinSet)) with
+  | nil => err (prod (Tag, FinSet)) (emptySet textFinSet)
+  | cons x xs => ok (prod (Tag, FinSet)) (tuple (x, setRemove x s))
+def setSplit : FinSet -> Result (prod (FinSet, FinSet)) := fun (s : FinSet) =>
+  bind (prod (Tag, FinSet)) (prod (FinSet, FinSet)) (singletonSplit s) (fun (p : prod (Tag, FinSet)) =>
+    ok (prod (FinSet, FinSet)) (tuple (setSingleton p.0, p.1)))
+def setMap : (Tag -> Tag) -> FinSet -> FinSet := fun (f : Tag -> Tag) (s : FinSet) => setNormal (listMap Tag Tag f s)
+def NumArrow : Type 0 := prod (Nat, Nat)
+def numCategory : Category Nat NumArrow := tuple (textNode,
+  (fun (h : NumArrow) => h.0), (fun (h : NumArrow) => natAdd h.0 h.1), (fun (n : Nat) => tuple (n, 0)),
+  (fun (g : NumArrow) (f : NumArrow) => case (natEq g.0 (natAdd f.0 f.1)) with
+    | 0 (u : Unit) => err NumArrow (notComposable textNode (natText g.0) (natText (natAdd f.0 f.1)))
+    | 1 (u : Unit) => ok NumArrow (tuple (f.0, natAdd f.1 g.1))), natEq,
+  (fun (f : NumArrow) (g : NumArrow) => boolAnd (natEq f.0 g.0) (natEq f.1 g.1)), natText,
+  (fun (h : NumArrow) => textAppend (natText h.0) (natText h.1)))
+def graphEnds : ArrowObject -> Tag -> Result (prod (Tag, Tag)) := fun (g : ArrowObject) (edge : Tag) =>
+  bind Tag (prod (Tag, Tag)) (setApply g.1 edge) tagUnpair
+def graphSource : ArrowObject -> Result FinArrow := fun (g : ArrowObject) =>
+  setMakeM g.0 g.2 (fun (edge : Tag) => resultMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.0) (graphEnds g edge))
+def graphTarget : ArrowObject -> Result FinArrow := fun (g : ArrowObject) =>
+  setMakeM g.0 g.2 (fun (edge : Tag) => resultMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.1) (graphEnds g edge))
+def graphMorphism : ArrowObject -> ArrowObject -> (Tag -> Tag) -> (Tag -> Tag) -> Result ArrowMorphism :=
+  fun (src : ArrowObject) (tgt : ArrowObject) (edges : Tag -> Tag) (nodes : Tag -> Tag) =>
+  let h : ArrowMorphism := tuple (src, setMake src.0 tgt.0 edges, setMake src.2 tgt.2 nodes, tgt) in
+  bind Bool ArrowMorphism (graphCommutes h) (fun (valid : Bool) =>
+    bind One ArrowMorphism (require valid (illFormed textFinGraph textRuleObligation)) (fun (u : One) => ok ArrowMorphism h))
+def discreteGraph : FinSet -> Result ArrowObject := fun (s : FinSet) => graphObject s s (fun (x : Tag) => x) (fun (x : Tag) => x)
+def asTotal : FinArrow -> Tag -> Tag := fun (h : FinArrow) (x : Tag) =>
+  match (setApply h x) as r in Result return Tag with | failure e => x | success y => y
+def discreteGraphFunctor : Functor FinSet FinArrow ArrowObject ArrowMorphism := tuple (textFinGraph, discreteGraph,
+  (fun (h : FinArrow) => bind ArrowObject ArrowMorphism (discreteGraph h.0) (fun (src : ArrowObject) =>
+    bind ArrowObject ArrowMorphism (discreteGraph h.2) (fun (tgt : ArrowObject) => graphMorphism src tgt (asTotal h) (asTotal h)))))
+def componentsUniversal : ArrowObject -> Result (UniversalArrow FinSet FinArrow ArrowMorphism) := fun (g : ArrowObject) =>
+  bind FinArrow (UniversalArrow FinSet FinArrow ArrowMorphism) (graphSource g) (fun (s : FinArrow) =>
+  bind FinArrow (UniversalArrow FinSet FinArrow ArrowMorphism) (graphTarget g) (fun (t : FinArrow) =>
+  bind (Coequalizer FinSet FinArrow) (UniversalArrow FinSet FinArrow ArrowMorphism) (setCoequalizer s t) (fun (ce : Coequalizer FinSet FinArrow) =>
+  bind ArrowObject (UniversalArrow FinSet FinArrow ArrowMorphism) (discreteGraph ce.0) (fun (dg : ArrowObject) =>
+  bind FinArrow (UniversalArrow FinSet FinArrow ArrowMorphism) (setCompose ce.1 s) (fun (qs : FinArrow) =>
+  resultMap ArrowMorphism (UniversalArrow FinSet FinArrow ArrowMorphism)
+    (fun (unit : ArrowMorphism) => tuple (ce.0, unit, (fun (target : FinSet) (h : ArrowMorphism) => ce.2 target h.2)))
+    (graphMorphism g dg (asTotal qs) (asTotal ce.1)))))))
+def componentsAdjunction : UniversalAdjunction FinSet FinArrow ArrowObject ArrowMorphism :=
+  tuple (textFinGraph, discreteGraphFunctor, componentsUniversal)
+def edgeComposition : prod (FinArrow, FinArrow) -> prod (FinArrow, FinArrow) -> Result (prod (FinArrow, FinArrow)) :=
+  fun (g : prod (FinArrow, FinArrow)) (h : prod (FinArrow, FinArrow)) =>
+  bind (Colimiting FinSet FinArrow) (prod (FinArrow, FinArrow)) (derivedPullback FinSet FinArrow finSetDualGround g.1 h.0)
+    (fun (pb : Colimiting FinSet FinArrow) =>
+    bind FinArrow (prod (FinArrow, FinArrow)) (pb.1 1) (fun (p1 : FinArrow) =>
+    bind FinArrow (prod (FinArrow, FinArrow)) (pb.1 2) (fun (p2 : FinArrow) =>
+    bind FinArrow (prod (FinArrow, FinArrow)) (setCompose g.0 p1) (fun (left : FinArrow) =>
+      resultMap FinArrow (prod (FinArrow, FinArrow)) (fun (right : FinArrow) => tuple (left, right)) (setCompose h.1 p2)))))
+def graphTransitiveClosure : (0 A : Type 0) -> ArrowObject -> Result A :=
+  fun (0 A : Type 0) (g : ArrowObject) => err A (unsupported textFinGraph textUniversal)

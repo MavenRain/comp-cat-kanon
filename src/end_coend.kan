@@ -1,0 +1,43 @@
+def TwHom : (0 H : Type 0) -> Type 0 := fun (0 H : Type 0) => prod (H, H, H, H)
+def twistedCategory : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> Category H (TwHom H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) =>
+  tuple (c.0, (fun (h : TwHom H) => h.0), (fun (h : TwHom H) => h.3),
+    (fun (h : H) => tuple (h, c.3 (c.1 h), c.3 (c.2 h), h)),
+    (fun (g : TwHom H) (f : TwHom H) => case (c.6 f.3 g.0) with
+      | 0 (u : Unit) => err (TwHom H) (notComposable c.0 (c.8 g.0) (c.8 f.3))
+      | 1 (u : Unit) => bind H (TwHom H) (c.4 f.1 g.1) (fun (left : H) =>
+        resultMap H (TwHom H) (fun (right : H) => tuple (f.0, left, right, g.3)) (c.4 g.2 f.2))), c.6,
+    (fun (f : TwHom H) (g : TwHom H) => boolAnd (boolAnd (c.6 f.0 g.0) (c.6 f.1 g.1))
+      (boolAnd (c.6 f.2 g.2) (c.6 f.3 g.3))), c.8,
+    (fun (h : TwHom H) => textAppend (c.8 h.1) (c.8 h.2)))
+def twistedHom : (0 O : Type 0) -> (0 H : Type 0) -> HomFinite O H -> H -> H -> List (TwHom H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : HomFinite O H) (a : H) (b : H) =>
+  listMap (prod (H, H)) (TwHom H) (fun (p : prod (H, H)) => tuple (a, p.0, p.1, b))
+    (listFilter (prod (H, H)) (fun (p : prod (H, H)) => resultHolds
+      (bind H Bool (c.0.4 a p.0) (fun (al : H) => resultMap H Bool (c.0.6 b) (c.0.4 p.1 al))))
+      (listCross H H (c.1 (c.0.1 b) (c.0.1 a)) (c.1 (c.0.2 a) (c.0.2 b))))
+def twistedFinite : (0 O : Type 0) -> (0 H : Type 0) -> FiniteCategory O H -> FiniteCategory H (TwHom H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : FiniteCategory O H) =>
+  tuple (tuple (twistedCategory O H c.0.0, twistedHom O H c.0), c.2,
+    listConcat (TwHom H) (listMap (prod (H, H)) (List (TwHom H))
+      (fun (p : prod (H, H)) => twistedHom O H c.0 p.0 p.1) (listCross H H c.2 c.2)))
+def twistedProjection : (0 O : Type 0) -> (0 H : Type 0) -> Category O H ->
+  Functor H (TwHom H) (prod (O, O)) (prod (H, H)) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) => tuple (c.0,
+    (fun (h : H) => ok (prod (O, O)) (tuple (c.1 h, c.2 h))),
+    (fun (h : TwHom H) => ok (prod (H, H)) (tuple (h.1, h.2))))
+def endDiagram : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  Category O H -> Functor (prod (O, O)) (prod (H, H)) P Q -> Functor H (TwHom H) P Q :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (c : Category O H)
+    (f : Functor (prod (O, O)) (prod (H, H)) P Q) =>
+  composeFunctor H (TwHom H) (prod (O, O)) (prod (H, H)) P Q f (twistedProjection O H c)
+def coend : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  FiniteCategory O H -> Grounding P Q -> Functor (prod (O, O)) (prod (H, H)) P Q -> Result (Colimiting P Q) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (c : FiniteCategory O H)
+    (d : Grounding P Q) (f : Functor (prod (O, O)) (prod (H, H)) P Q) =>
+  colimit H (TwHom H) P Q (twistedFinite O H c) d (endDiagram O H P Q c.0.0 f)
+def categoricalEnd : (0 O : Type 0) -> (0 H : Type 0) -> (0 P : Type 0) -> (0 Q : Type 0) ->
+  FiniteCategory O H -> Grounding P Q -> Functor (prod (O, O)) (prod (H, H)) P Q -> Result (Colimiting P Q) :=
+  fun (0 O : Type 0) (0 H : Type 0) (0 P : Type 0) (0 Q : Type 0) (c : FiniteCategory O H)
+    (d : Grounding P Q) (f : Functor (prod (O, O)) (prod (H, H)) P Q) =>
+  limit H (TwHom H) P Q (twistedFinite O H c) d (endDiagram O H P Q c.0.0 f)

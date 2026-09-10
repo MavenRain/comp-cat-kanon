@@ -1,0 +1,67 @@
+-- Normalize applications structurally, then eliminate one variable per pass.
+-- Each pass removes a variable from the finite target, so no arbitrary fuel is
+-- needed. All substitutions are propagated before the next pass.
+def Constraint : Type 0 := prod (Tag, Term)
+def rec normalizeEquation : Term -> Term -> Result (List Constraint) := fun (left : Term) (right : Term) =>
+  match left as self in Term return Result (List Constraint) with
+  | termVar x => (match right as other in Term return Result (List Constraint) with
+    | termVar y => (case (tagEqual x y) with
+      | 1 (u : Unit) => ok (List Constraint) (listNil Constraint)
+      | 0 (u : Unit) => ok (List Constraint) (listCons Constraint (tuple (x, right)) (listNil Constraint)))
+    | termApply op args => ok (List Constraint) (listCons Constraint (tuple (x, right)) (listNil Constraint)))
+  | termApply op args => (match right as other in Term return Result (List Constraint) with
+    | termVar y => ok (List Constraint) (listCons Constraint (tuple (y, left)) (listNil Constraint))
+    | termApply op2 args2 => (case (operatorEqual op op2) with
+      | 0 (u : Unit) => err (List Constraint) (clash (termText left) (termText right))
+      | 1 (u : Unit) => normalizeArguments args args2))
+and normalizeArguments : TermArgs -> TermArgs -> Result (List Constraint) := fun (left : TermArgs) (right : TermArgs) =>
+  match left as self in TermArgs return Result (List Constraint) with
+  | termArgsNil => ok (List Constraint) (listNil Constraint)
+  | termArgsCons place value rest =>
+    bind Term (List Constraint) (termArgsLookup right place) (fun (other : Term) =>
+    bind (List Constraint) (List Constraint) (normalizeEquation value other) (fun (here : List Constraint) =>
+      resultMap (List Constraint) (List Constraint) (listAppend Constraint here) (normalizeArguments rest right)))
+def unitUnify : Tag -> Term -> FinSet -> FinSet -> Substitution :=
+  fun (x : Tag) (term : Term) (source : FinSet) (target : FinSet) =>
+  tuple (source, (fun (z : Tag) => case (tagEqual z x) with | 0 (u : Unit) => termVar z | 1 (u : Unit) => term), target)
+def UnifyState : Type 0 := prod (List Constraint, Substitution)
+def unifyStep : UnifyState -> Tag -> Result UnifyState := fun (state : UnifyState) (tick : Tag) =>
+  match state.0 as self in List return Result UnifyState with
+  | nil => ok UnifyState state
+  | cons equation rest =>
+    case (termOccurs equation.1 equation.0) with
+    | 1 (u : Unit) => err UnifyState (cyclic (tagText equation.0) (termText equation.1))
+    | 0 (u : Unit) =>
+      let remaining : FinSet := setDifference state.1.2 (setSingleton equation.0) in
+      let sub : Substitution := unitUnify equation.0 equation.1 state.1.2 remaining in
+      bind Substitution UnifyState (substCompose sub state.1) (fun (composite : Substitution) =>
+        resultMap (List (List Constraint)) UnifyState (fun (next : List (List Constraint)) =>
+          tuple (listConcat Constraint next, composite))
+          (listMapM Constraint (List Constraint) (fun (e : Constraint) =>
+            normalizeEquation (sub.1 e.0) (substApply e.1 sub)) rest))
+def unify : Substitution -> Substitution -> Result Substitution := fun (f : Substitution) (g : Substitution) =>
+  bind One Substitution (require (boolAnd (setEqual f.0 g.0) (setEqual f.2 g.2))
+    (illFormed textFinKleisli textNotParallel)) (fun (u : One) =>
+  bind (List (List Constraint)) Substitution
+    (listMapM Tag (List Constraint) (fun (x : Tag) => normalizeEquation (f.1 x) (g.1 x)) f.0)
+    (fun (raw : List (List Constraint)) =>
+      bind UnifyState Substitution (listFoldM Tag UnifyState f.2
+        (tuple (listConcat Constraint raw, substIdentity f.2)) unifyStep)
+        (fun (final : UnifyState) =>
+          match final.0 as self in List return Result Substitution with
+          | nil => ok Substitution final.1
+          | cons e rest => err Substitution (illFormed textFinKleisli textUnifyDomain))))
+def recoverable : Error -> Bool := fun (e : Error) =>
+  boolOr (natEq (errorCode e) 11) (natEq (errorCode e) 12)
+def onRecoverable : Result Substitution -> (One -> Result Substitution) -> Result Substitution :=
+  fun (primary : Result Substitution) (fallback : One -> Result Substitution) =>
+  match primary as self in Result return Result Substitution with
+  | success s => ok Substitution s
+  | failure e => (case (recoverable e) with | 0 (u : Unit) => err Substitution e | 1 (u : Unit) => fallback one)
+def fkCoequalizer : Substitution -> Substitution -> Result (Coequalizer FinSet Substitution) :=
+  fun (f : Substitution) (g : Substitution) =>
+  resultMap Substitution (Coequalizer FinSet Substitution) (fun (q : Substitution) =>
+    tuple (q.2, q, (fun (target : FinSet) (h : Substitution) =>
+      err Substitution (unsupported textFkUniversal textFkUniversalOmitted)))) (unify f g)
+def finKleisliGround : Grounding FinSet Substitution :=
+  tuple (finKleisliCategory, fkInitial, fkCoproduct, fkCoequalizer)

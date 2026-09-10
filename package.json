@@ -1,0 +1,14 @@
+{
+  "name": "comp-cat-kanon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Computational category theory in native Kanon, ported from comp-cat-ocaml",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "bootstrap": "python3 scripts/bootstrap.py",
+    "test": "node scripts/source-check.mjs && node test/compiler.mjs && node test/run.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {"node": ">=22"}
+}

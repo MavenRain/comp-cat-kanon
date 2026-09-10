@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/MavenRain/kanon.git",
+  "revision": "69f3be5198cda4334de4fd23b4ccc92cac595789",
+  "patch_sha256": "7a5573c4c9805a0937b34040c43d1945e0eb8134f4098d915ebf4f37434e38f2",
+  "dune": "3.24",
+  "zarith": "1.14"
+}

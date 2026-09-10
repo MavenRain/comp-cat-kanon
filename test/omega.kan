@@ -1,0 +1,23 @@
+def tFuel : Fuel := fuelSucc (fuelSucc (fuelSucc fuelZero))
+def tEmptyFunctor : Functor FinSet FinArrow FinSet FinArrow := tuple (listNil Nat,
+  (fun (s : FinSet) => ok FinSet setEmpty), (fun (h : FinArrow) => ok FinArrow (setIdentity setEmpty)))
+def testOmegaBudget : Nat :=
+  let r : Result (CountableCoproduct FinSet FinArrow) := iteratedCoproduct FinSet FinArrow finSetGround finSetIso
+    tFuel (identityFunctor FinSet FinArrow) tA in
+  match r as self in Result return Nat with | success a => 0 | failure e => 1
+def testOmegaEmpty : Nat := boolNat (resultHolds
+  (resultMap (CountableCoproduct FinSet FinArrow) Bool (fun (cp : CountableCoproduct FinSet FinArrow) =>
+    boolAnd (natEq cp.0 0) (setEqual cp.2 setEmpty))
+    (iteratedCoproduct FinSet FinArrow finSetGround finSetIso tFuel tEmptyFunctor setEmpty)))
+def testOmegaOneStage : Nat := boolNat (resultHolds
+  (resultMap (CountableCoproduct FinSet FinArrow) Bool (fun (cp : CountableCoproduct FinSet FinArrow) =>
+    boolAnd (natEq cp.0 1) (natEq (setCardinality cp.2) 2))
+    (iteratedCoproduct FinSet FinArrow finSetGround finSetIso tFuel tEmptyFunctor tA)))
+def testOmegaFixedPoint : Nat := boolNat (resultHolds (resultMap Nat Bool (natEq 0)
+  (omegaFixedPoint FinSet FinArrow finSetIso tFuel (fun (n : Nat) => ok FinArrow tIdentity) 0)))
+def testOmegaColimitLeg : Nat := boolNat (resultHolds
+  (bind (OmegaColimit FinSet FinArrow) Bool (omegaColimit FinSet FinArrow finSetIso tFuel (fun (n : Nat) => ok FinArrow tIdentity))
+    (fun (col : OmegaColimit FinSet FinArrow) => resultMap FinArrow Bool (setArrowEqual tIdentity) (col.0.2 2))))
+def testFreeAlgebra : Nat := boolNat (resultHolds
+  (resultMap (FreeAlgebra FinSet FinArrow) Bool (fun (fa : FreeAlgebra FinSet FinArrow) => natEq (setCardinality fa.0.0) 2)
+    (freeAlgebra FinSet FinArrow finSetGround finSetIso tFuel tEmptyFunctor tA)))

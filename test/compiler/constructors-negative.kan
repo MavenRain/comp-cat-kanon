@@ -1,0 +1,5 @@
+mu Box (A : Type 0) : Type 0 :=
+| box (value : A) : Box A
+mu Other : Type 0 :=
+| other : Other
+def invalidBox : Box Nat := box other

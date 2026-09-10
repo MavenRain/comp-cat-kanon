@@ -1,0 +1,37 @@
+def Comparison : (0 H : Type 0) -> Type 0 := fun (0 H : Type 0) => prod (H, H, Bool, Bool)
+def compareIsomorphism : (0 O : Type 0) -> (0 H : Type 0) -> Category O H -> H -> H -> Result (Comparison H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (c : Category O H) (fwd : H) (bwd : H) =>
+  bind H (Comparison H) (c.4 bwd fwd) (fun (r1 : H) => resultMap H (Comparison H)
+    (fun (r2 : H) => tuple (fwd, bwd, c.6 r1 (c.3 (c.1 fwd)), c.6 r2 (c.3 (c.2 fwd)))) (c.4 fwd bwd))
+def comparisonVerdict : (0 H : Type 0) -> Comparison H -> Result One :=
+  fun (0 H : Type 0) (c : Comparison H) => require (boolAnd c.2 c.3) (notUniversal textUniversal)
+def compareInitial : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Result (Comparison H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) =>
+  bind (Colimiting O H) (Comparison H) (derivedInitial O H g) (fun (col : Colimiting O H) =>
+  bind H (Comparison H) (g.1.1 col.0) (fun (fwd : H) =>
+  bind H (Comparison H) (col.2 g.1.0 (fun (n : Nat) => err H (notInShape textNode n)))
+    (compareIsomorphism O H g.0 fwd)))
+def checkInitial : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> Result One :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) =>
+  bind (Comparison H) One (compareInitial O H g) (fun (c : Comparison H) =>
+  bind One One (comparisonVerdict H c) (fun (u : One) =>
+  bind (Colimiting O H) One (derivedInitial O H g) (fun (col : Colimiting O H) =>
+    require (g.0.5 col.0 g.1.0) (notUniversal textUniversal))))
+def compareCoproduct : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> O -> O -> Result (Comparison H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (a : O) (b : O) =>
+  bind (Colimiting O H) (Comparison H) (derivedCoproduct O H g a b) (fun (col : Colimiting O H) =>
+  bind (Coproduct O H) (Comparison H) (g.2 a b) (fun (p : Coproduct O H) =>
+  bind H (Comparison H) (col.1 0) (fun (e0 : H) =>
+  bind H (Comparison H) (col.1 1) (fun (e1 : H) =>
+  bind H (Comparison H) (p.3 col.0 e0 e1) (fun (fwd : H) =>
+  bind H (Comparison H) (col.2 p.0 (fun (n : Nat) => case (natEq n 0) with
+    | 0 (u : Unit) => ok H p.2 | 1 (u : Unit) => ok H p.1)) (compareIsomorphism O H g.0 fwd))))))
+def compareCoequalizer : (0 O : Type 0) -> (0 H : Type 0) -> Grounding O H -> H -> H -> Result (Comparison H) :=
+  fun (0 O : Type 0) (0 H : Type 0) (g : Grounding O H) (f : H) (h : H) =>
+  bind (Colimiting O H) (Comparison H) (derivedCoequalizer O H g f h) (fun (col : Colimiting O H) =>
+  bind (Coequalizer O H) (Comparison H) (g.3 f h) (fun (p : Coequalizer O H) =>
+  bind H (Comparison H) (col.1 1) (fun (e1 : H) =>
+  bind H (Comparison H) (p.2 col.0 e1) (fun (fwd : H) =>
+  bind H (Comparison H) (g.0.4 p.1 f) (fun (qf : H) =>
+  bind H (Comparison H) (col.2 p.0 (fun (n : Nat) => case (natEq n 1) with
+    | 0 (u : Unit) => ok H qf | 1 (u : Unit) => ok H p.1)) (compareIsomorphism O H g.0 fwd))))))

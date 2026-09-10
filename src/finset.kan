@@ -1,0 +1,125 @@
+-- Finite sets have extensional equality; arrows are finite total graphs.
+def FinSet : Type 0 := List Tag
+def FinGraph : Type 0 := List (prod (Tag, Tag))
+def FinArrow : Type 0 := prod (FinSet, FinGraph, FinSet)
+def setMember : Tag -> FinSet -> Bool := listMember Tag tagEqual
+def setNormal : FinSet -> FinSet := listUnique Tag tagEqual
+def setEqual : FinSet -> FinSet -> Bool := fun (a : FinSet) (b : FinSet) =>
+  boolAnd (listAll Tag (fun (x : Tag) => setMember x b) a) (listAll Tag (fun (x : Tag) => setMember x a) b)
+def setUnion : FinSet -> FinSet -> FinSet := fun (a : FinSet) (b : FinSet) => setNormal (listAppend Tag a b)
+def setSingleton : Tag -> FinSet := fun (x : Tag) => listCons Tag x (listNil Tag)
+def setCardinality : FinSet -> Nat := listLength Tag
+def setEmpty : FinSet := listNil Tag
+def setIntersection : FinSet -> FinSet -> FinSet := fun (a : FinSet) (b : FinSet) =>
+  listFilter Tag (fun (x : Tag) => setMember x b) a
+def setDifference : FinSet -> FinSet -> FinSet := fun (a : FinSet) (b : FinSet) =>
+  listFilter Tag (fun (x : Tag) => boolNot (setMember x b)) a
+def setText : FinSet -> Text := fun (s : FinSet) =>
+  textAppend textOpenSet (textAppend (textJoin textComma (listMap Tag Text tagText s)) textCloseSet)
+def setArrowText : FinArrow -> Text := fun (h : FinArrow) =>
+  textAppend (setText h.0) (textAppend textArrow (textAppend (setText h.2)
+    (textAppend textOpenGraph (textAppend
+      (textJoin textSemi (listMap (prod (Tag, Tag)) Text (fun (p : prod (Tag, Tag)) =>
+        textAppend (tagText p.0) (textAppend textMapsTo (tagText p.1))) h.1)) textCloseGraph))))
+
+def graphLookup : FinGraph -> Tag -> Result Tag := fun (graph : FinGraph) (x : Tag) =>
+  let found : Result (prod (Tag, Tag)) :=
+    (listFind (prod (Tag, Tag)) (fun (p : prod (Tag, Tag)) => tagEqual p.0 x)
+      noWitness graph) in
+  match found as self in Result return Result Tag with
+  | failure e => err Tag (notInDomain textFinsetApp (tagText x))
+  | success p => ok Tag p.1
+def setApply : FinArrow -> Tag -> Result Tag := fun (h : FinArrow) (x : Tag) => graphLookup h.1 x
+def setMake : FinSet -> FinSet -> (Tag -> Tag) -> FinArrow :=
+  fun (src : FinSet) (tgt : FinSet) (f : Tag -> Tag) =>
+  tuple (src, listMap Tag (prod (Tag, Tag)) (fun (x : Tag) => tuple (x, f x)) src, tgt)
+def setMakeM : FinSet -> FinSet -> (Tag -> Result Tag) -> Result FinArrow :=
+  fun (src : FinSet) (tgt : FinSet) (f : Tag -> Result Tag) =>
+  resultMap FinGraph FinArrow (fun (graph : FinGraph) => tuple (src, graph, tgt))
+    (listMapM Tag (prod (Tag, Tag)) (fun (x : Tag) =>
+      resultMap Tag (prod (Tag, Tag)) (fun (y : Tag) => tuple (x, y)) (f x)) src)
+def setArrowEqual : FinArrow -> FinArrow -> Bool := fun (a : FinArrow) (b : FinArrow) =>
+  boolAnd (boolAnd (setEqual a.0 b.0) (setEqual a.2 b.2))
+    (listAll Tag (fun (x : Tag) => match (setApply a x) as left in Result return Bool with
+      | failure e => (match (setApply b x) as right in Result return Bool with | failure e2 => true | success y => false)
+      | success y => resultHolds (resultMap Tag Bool (tagEqual y) (setApply b x))) a.0)
+def setParallel : FinArrow -> FinArrow -> Bool := fun (f : FinArrow) (g : FinArrow) =>
+  boolAnd (setEqual f.0 g.0) (setEqual f.2 g.2)
+def setIdentity : FinSet -> FinArrow := fun (s : FinSet) => setMake s s (fun (x : Tag) => x)
+def setCompose : FinArrow -> FinArrow -> Result FinArrow := fun (g : FinArrow) (f : FinArrow) =>
+  case (setEqual g.0 f.2) with
+  | 0 (u : Unit) => err FinArrow (notComposable textFinSet (setText g.0) (setText f.2))
+  | 1 (u : Unit) => setMakeM f.0 g.2 (fun (x : Tag) => bind Tag Tag (setApply f x) (setApply g))
+
+def rec setGraphs : FinSet -> FinSet -> List FinGraph := fun (src : FinSet) (tgt : FinSet) =>
+  match src as self in List return List FinGraph with
+  | nil => listCons FinGraph (listNil (prod (Tag, Tag))) (listNil FinGraph)
+  | cons x xs =>
+    let tails : List FinGraph := setGraphs xs tgt in
+    listConcat FinGraph (listMap Tag (List FinGraph) (fun (y : Tag) =>
+      listMap FinGraph FinGraph (fun (rest : FinGraph) => listCons (prod (Tag, Tag)) (tuple (x, y)) rest) tails) tgt)
+def setHom : FinSet -> FinSet -> List FinArrow := fun (src : FinSet) (tgt : FinSet) =>
+  listMap FinGraph FinArrow (fun (graph : FinGraph) => tuple (src, graph, tgt)) (setGraphs src tgt)
+def finSetCategory : Category FinSet FinArrow := tuple (textFinSet,
+  (fun (h : FinArrow) => h.0), (fun (h : FinArrow) => h.2), setIdentity, setCompose,
+  setEqual, setArrowEqual, setText, setArrowText)
+def finSet : HomFinite FinSet FinArrow := tuple (finSetCategory, setHom)
+
+def setInitial : Initial FinSet FinArrow := tuple (setEmpty,
+  (fun (target : FinSet) => ok FinArrow (tuple (setEmpty, listNil (prod (Tag, Tag)), target))))
+def setCoproduct : FinSet -> FinSet -> Result (Coproduct FinSet FinArrow) := fun (a : FinSet) (b : FinSet) =>
+  let total : FinSet := setUnion (listMap Tag Tag (fun (x : Tag) => tagPink x) a) (listMap Tag Tag (fun (x : Tag) => tagBlue x) b) in
+  ok (Coproduct FinSet FinArrow) (tuple (total,
+    setMake a total (fun (x : Tag) => tagPink x), setMake b total (fun (x : Tag) => tagBlue x),
+    (fun (c : FinSet) (f : FinArrow) (g : FinArrow) =>
+      setMakeM total c (fun (x : Tag) => bind (prod (Bool, Tag)) Tag (tagSplit x) (fun (p : prod (Bool, Tag)) =>
+        case p.0 with | 0 (u : Unit) => setApply f p.1 | 1 (u : Unit) => setApply g p.1)))))
+
+def setCoequalizer : FinArrow -> FinArrow -> Result (Coequalizer FinSet FinArrow) := fun (f : FinArrow) (g : FinArrow) =>
+  bind One (Coequalizer FinSet FinArrow) (require (setParallel f g) (illFormed textCoequalizer textNotParallel))
+    (fun (u : One) =>
+      resultMap FinGraph (Coequalizer FinSet FinArrow) (fun (table : FinGraph) =>
+        let classes : FinSet := setNormal (listMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.1) table) in
+        tuple (classes, tuple (f.2, table, classes),
+          (fun (c : FinSet) (h : FinArrow) => setMakeM classes c (setApply h))))
+      (listFoldM Tag FinGraph f.0 (setIdentity f.2).1 (fun (table : FinGraph) (y : Tag) =>
+        bind Tag FinGraph (setApply f y) (fun (fy : Tag) =>
+        bind Tag FinGraph (setApply g y) (fun (gy : Tag) =>
+        bind Tag FinGraph (graphLookup table fy) (fun (r1 : Tag) =>
+        resultMap Tag FinGraph (fun (r2 : Tag) => listMap (prod (Tag, Tag)) (prod (Tag, Tag))
+          (fun (p : prod (Tag, Tag)) => tuple (p.0,
+            (case (tagEqual p.1 r2) with | 0 (u : Unit) => p.1 | 1 (u : Unit) => r1))) table)
+          (graphLookup table gy)))))))
+def finSetGround : Grounding FinSet FinArrow := tuple (finSetCategory, setInitial, setCoproduct, setCoequalizer)
+
+def setTerminal : Initial FinSet FinArrow := tuple (setSingleton tagTrue,
+  (fun (a : FinSet) => ok FinArrow (setMake a (setSingleton tagTrue) (fun (x : Tag) => tagTrue))))
+def setProduct : FinSet -> FinSet -> Result (Coproduct FinSet FinArrow) := fun (a : FinSet) (b : FinSet) =>
+  let cross : FinSet := setNormal (listConcat Tag (listMap Tag (List Tag) (fun (x : Tag) =>
+    listMap Tag Tag (fun (y : Tag) => tagPair x y) b) a)) in
+  bind FinArrow (Coproduct FinSet FinArrow)
+    (setMakeM cross a (fun (x : Tag) => resultMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.0) (tagUnpair x)))
+    (fun (pa : FinArrow) =>
+  resultMap FinArrow (Coproduct FinSet FinArrow) (fun (pb : FinArrow) =>
+    tuple (cross, pa, pb, (fun (p : FinSet) (f : FinArrow) (g : FinArrow) =>
+      setMakeM p cross (fun (x : Tag) => bind Tag Tag (setApply f x) (fun (y : Tag) =>
+        resultMap Tag Tag (fun (z : Tag) => tagPair y z) (setApply g x))))))
+    (setMakeM cross b (fun (x : Tag) => resultMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.1) (tagUnpair x))))
+def setEqualizer : FinArrow -> FinArrow -> Result (Coequalizer FinSet FinArrow) := fun (f : FinArrow) (g : FinArrow) =>
+  bind One (Coequalizer FinSet FinArrow) (require (setParallel f g) (illFormed textEqualizer textNotParallel))
+    (fun (u : One) =>
+      let subset : FinSet := listFilter Tag (fun (x : Tag) => resultHolds
+        (bind Tag Bool (setApply f x) (fun (fx : Tag) => resultMap Tag Bool (tagEqual fx) (setApply g x)))) f.0 in
+      ok (Coequalizer FinSet FinArrow) (tuple (subset, setMake subset f.0 (fun (x : Tag) => x),
+        (fun (target : FinSet) (h : FinArrow) => setMakeM target subset (fun (x : Tag) =>
+          bind Tag Tag (setApply h x) (fun (y : Tag) =>
+            bind One Tag (require (setMember y subset) (notUniversal (listNil Nat))) (fun (u : One) => ok Tag y)))))))
+def finSetDualGround : Grounding FinSet FinArrow := tuple (opposite FinSet FinArrow finSetCategory, setTerminal, setProduct, setEqualizer)
+
+def setIsIso : FinArrow -> Bool := fun (h : FinArrow) =>
+  boolAnd (natEq (setCardinality h.0) (setCardinality h.2))
+    (natEq (setCardinality (setNormal (listMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.1) h.1))) (setCardinality h.2))
+def setInvert : FinArrow -> Result FinArrow := fun (h : FinArrow) =>
+  setMakeM h.2 h.0 (fun (x : Tag) => resultMap (prod (Tag, Tag)) Tag (fun (p : prod (Tag, Tag)) => p.0)
+    (listFind (prod (Tag, Tag)) (fun (p : prod (Tag, Tag)) => tagEqual p.1 x) (notUniversal textUniversal) h.1))
+def finSetIso : IsoCategory FinSet FinArrow := tuple (finSetCategory, setIsIso, setInvert)
